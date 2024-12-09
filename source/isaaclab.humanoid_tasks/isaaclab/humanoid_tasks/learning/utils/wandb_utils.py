@@ -32,10 +32,10 @@ class WandbSummaryWriter(SummaryWriter):
                 "Wandb username not found. Please run or add to ~/.bashrc: export WANDB_USERNAME=YOUR_USERNAME"
             )
 
-        wandb.init(
-            project=project,
-            entity=entity
-        )
+        wandb.init(project=project, entity=entity)
+
+        # Change generated name to project-number format
+        wandb.run.name = "/".join(log_dir.split("/")[-2:])  # project + wandb.run.name.split("-")[-1]
 
         self.name_map = {
             "Train/mean_reward/time": "Train/mean_reward_time",
@@ -43,8 +43,6 @@ class WandbSummaryWriter(SummaryWriter):
         }
 
         run_name = os.path.split(log_dir)[-1]
-        # Change generated name to project-number format
-        wandb.run.name = log_dir.split("/")[1:].join("/")
 
         wandb.log({"log_dir": run_name})
 

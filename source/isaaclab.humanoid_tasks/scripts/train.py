@@ -49,8 +49,7 @@ import os
 import torch
 from datetime import datetime
 
-# from isaaclab.booster_pbrs.frameworks.robot_rl.runners.on_policy_runner import OnPolicyRunner
-from rsl_rl.runners import OnPolicyRunner
+from isaaclab.humanoid_tasks.learning.runners import OnPolicyRunner
 
 from omni.isaac.lab.envs import (
     DirectMARLEnv,
@@ -87,6 +86,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # note: certain randomizations occur in the environment initialization so we set the seed here
     env_cfg.seed = agent_cfg.seed
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+    agent_cfg.device = env_cfg.sim.device
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)

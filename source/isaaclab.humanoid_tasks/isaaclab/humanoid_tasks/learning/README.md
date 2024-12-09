@@ -1,0 +1,1 @@
+This adapated learning framework was directly copied from [amrl-isaaclab-extensions](https://github.com/ut-amrl/amrl-isaaclab-extensions/tree/main/source/extensions/isaaclab.booster/isaaclab/booster/frameworks/locomotion) with RMP implemented.

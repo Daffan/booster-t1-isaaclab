@@ -31,8 +31,9 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
         self.action_histories = deque(maxlen=3)
 
     def reset(self, seed: int | None = None, options = None):
-        super(HumanoidRLEnv, self).reset(seed, options)
+        output = super(HumanoidRLEnv, self).reset(seed, options)
         self.phase_time = torch.rand(self.phase_time.shape, device=self.phase_time.device) / 2 / torch.pi / self.cfg.phase_freq
+        return output
 
     def _reset_idx(self, env_ids: Sequence[int]):
         out = super()._reset_idx(env_ids)

@@ -36,6 +36,7 @@ docker/.container.cfg
 **/.neptune/*
 docker/artifacts/
 *.tmp
+debug/*
 
 # Doc Outputs
 **/docs/_build/*

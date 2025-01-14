@@ -1,0 +1,182 @@
+from __future__ import annotations
+
+import torch
+from typing import TYPE_CHECKING
+
+from omni.isaac.lab.assets import Articulation, RigidObject
+from omni.isaac.lab.managers import ManagerTermBase, SceneEntityCfg
+from omni.isaac.lab.sensors import ContactSensor
+from omni.isaac.lab.utils.math import wrap_to_pi, euler_xyz_from_quat
+
+if TYPE_CHECKING:
+    from omni.isaac.lab.managers import RewardTermCfg
+    from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
+
+def tracking_lin_vel_x(
+    env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float
+):
+    """Reward tracking of linear velocity commands (x axes) using abs exponential kernel."""
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # compute the error
+    target = env.command_manager.get_command("base_velocity")[:, 0]
+    # TODO: booster_gym used a running average of the linear velocity, but we don't have that here
+    lin_vel_error = target - asset.data.root_lin_vel_b[:, 0]
+    lin_vel_error = torch.square(lin_vel_error)
+    return torch.exp(-lin_vel_error / std)
+
+def tracking_lin_vel_x(
+    env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float
+):
+    """Reward tracking of linear velocity commands (y axes) using abs exponential kernel."""
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # compute the error
+    target = env.command_manager.get_command("base_velocity")[:, 1]
+    # TODO: booster_gym used a running average of the linear velocity, but we don't have that here
+    lin_vel_error = target - asset.data.root_lin_vel_b[:, 1]
+    lin_vel_error = torch.square(lin_vel_error)
+    return torch.exp(-lin_vel_error / std)
+
+def tracking_ang_vel(
+    env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float
+):
+    """Reward tracking of angular velocity commands using abs exponential kernel."""
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # compute the error
+    target = env.command_manager.get_command("base_velocity")[:, 2]
+    ang_vel_error = target - asset.data.root_ang_vel_b[:, 2]
+    ang_vel_error = torch.square(ang_vel_error)
+    return torch.exp(-ang_vel_error / std)
+
+def survival(env: HumanoidRLEnv) -> torch.Tensor:
+    """Reward for survival."""
+    return torch.ones(env.num_envs, device=env.device)
+
+def base_height(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, target_height=0.68) -> torch.Tensor:
+    """Reward for keeping the base height."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    base_height = asset.data.root_pos_w[:, 2]
+    return torch.square(base_height - target_height)
+
+def collision(env: HumanoidRLEnv, sensor_cfg: SceneEntityCfg, threshold=0.1) -> torch.Tensor:
+    """Reward for avoiding collisions."""
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    contact_force = contact_sensor.data.net_forces_w
+    return torch.sum(torch.norm(contact_force, dim=-1) > 1.0, dim=-1)
+
+def orientation(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Reward for keeping the base orientation."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return torch.sum(torch.square(asset.data.projected_gravity_b[:, :2]), dim=-1)
+
+def torques(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Reward for minimizing the torques."""
+    asset: Articulation = env.scene[asset_cfg.name]
+    return torch.sum(torch.square(asset.data.applied_torque), dim=-1)
+
+def torque_tiredness(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, threshold=0.1) -> torch.Tensor:
+    """Reward for avoiding torque tiredness."""
+    # TODO: not sure how to access this value
+    asset: Articulation = env.scene[asset_cfg.name]
+    torque_limits = asset.data.torque_limits
+    torques = asset.data.applied_torque
+    return torch.sum(torch.square(torques / torque_limits).clip(max=1.0), dim=-1)
+
+def power(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Reward for minimizing the power."""
+    asset: Articulation = env.scene[asset_cfg.name]
+    return torch.sum((asset.data.applied_torque * asset.data.joint_vel).clip(min=0.0), dim=-1)
+
+def lin_vel_z(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Reward for keeping the linear velocity in z direction."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return torch.square(asset.data.root_lin_vel_b[:, 2])
+
+def ang_vel_xy(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Reward for keeping the angular velocity in xy direction."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return torch.sum(torch.square(asset.data.root_ang_vel_b[:, :2]))
+
+def dof_vel(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Penalize joint velocities on the articulation."""
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+    return torch.norm((asset.data.joint_vel), dim=1) ** 2
+
+def dof_acc(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Penalize joint accelerations on the articulation."""
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+    return torch.norm((asset.data.joint_acc), dim=1) ** 2
+
+def root_acc(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Penalize root accelerations."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # the first body should be the Trunk, but we need to double check
+    return torch.norm((asset.data.body_acc_w[0]), dim=1) ** 2
+
+def action_rate(env: HumanoidRLEnv) -> torch.Tensor:
+    """Penalize large instantaneous changes in the network action output"""
+    return torch.linalg.norm((env.action_manager.action - env.action_manager.prev_action) / env.step_dt, dim=1) ** 2
+
+def joint_position_limit_penalty(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Penalize joint position limits on the articulation."""
+    asset: Articulation = env.scene[asset_cfg.name]
+    dof_pos_limits = asset.data.soft_joint_pos_limits
+    dof_pos = asset.data.joint_pos
+
+    out_of_limits = -(dof_pos - dof_pos_limits[..., 0]).clip(max=0.) # lower limit
+    out_of_limits += (dof_pos - dof_pos_limits[..., 1]).clip(min=0.)
+
+    return torch.sum(out_of_limits, dim=1)
+
+def feet_slip(
+    env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, threshold: float
+) -> torch.Tensor:
+    """Penalize foot planar (xy) slip when in contact with the ground"""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # extract the used quantities (to enable type-hinting)
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+    # check if contact force is above threshold
+    net_contact_forces = contact_sensor.data.net_forces_w_history
+    is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > threshold
+    foot_planar_velocity = torch.linalg.norm(asset.data.body_lin_vel_w[:, asset_cfg.body_ids, :2], dim=2)
+
+    reward = is_contact * foot_planar_velocity
+    return torch.sum(reward, dim=1)
+
+def feet_yaw_diff(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Penalize the difference in yaw between the feet"""
+    # make sure the asset_cfg only contains the feet joints
+    asset: RigidObject = env.scene[asset_cfg.name]
+    *_, feet_yaw = euler_xyz_from_quat(asset.data.body_quat_w[:, asset_cfg.body_ids])
+    return torch.square(wrap_to_pi(feet_yaw[:, 0] - feet_yaw[:, 1]))
+
+def feet_yaw_mean(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    # make sure the asset_cfg only contains the feet joints
+    asset: Articulation = env.scene[asset_cfg.name]
+    *_, feet_yaw = euler_xyz_from_quat(asset.data.body_quat_w[:, asset_cfg.body_ids])
+    *_, base_yaw = euler_xyz_from_quat(asset.data.root_quat_w)
+    feet_yaw_mean = feet_yaw.mean(dim=-1) + torch.pi * (torch.abs(feet_yaw[:, 1] - feet_yaw[:, 0]) > torch.pi)
+    return torch.square(wrap_to_pi(base_yaw - feet_yaw_mean))
+
+def feet_distance(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, feet_distance_ref: float=0.2) -> torch.Tensor:
+    asset: Articulation = env.scene[asset_cfg.name]
+    feet_pos = asset.data.body_pos_w[:, asset_cfg.body_ids]
+    *_, base_yaw = euler_xyz_from_quat(asset.data.root_quat_w)
+    feet_distance = torch.abs(
+        torch.cos(base_yaw) * (feet_pos[:, 1, 1] - feet_pos[:, 0, 1])
+        - torch.sin(base_yaw) * (feet_pos[:, 1, 0] - feet_pos[:, 0, 0])
+    )
+    return torch.clip(feet_distance_ref - feet_distance, min=0.0, max=0.1)
+
+# def feet_swing(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+#     asset: Articulation = env.scene[asset_cfg.name]
+#     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+#     # get contact state
+#     is_contact = contact_sensor.compute_first_contact(env.step_dt)[:, sensor_cfg.body_ids]
+#     left_swing = (torch.abs(env.phase_time - 0.25) < 0.5 * self.cfg["rewards"]["swing_period"]) & (self.gait_frequency > 1.0e-8)
+#     right_swing = (torch.abs(env.phase_time - 0.75) < 0.5 * self.cfg["rewards"]["swing_period"]) & (self.gait_frequency > 1.0e-8)

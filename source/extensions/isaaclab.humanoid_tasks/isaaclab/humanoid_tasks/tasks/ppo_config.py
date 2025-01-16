@@ -52,3 +52,14 @@ class T1WalkFlatPPORunnerCfg(T1PPORunnerCfg):
         self.experiment_name = "t1_walking_flat"
         self.policy.actor_hidden_dims = [256, 128, 128]
         self.policy.critic_hidden_dims = [256, 128, 128]
+
+
+@configclass
+class T1KickPPORunnerCfg(T1PPORunnerCfg):
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.max_iterations = 20000
+        self.experiment_name = "t1_kick"
+        self.policy.actor_hidden_dims = [256, 128, 128]
+        self.policy.critic_hidden_dims = [256, 128, 128]

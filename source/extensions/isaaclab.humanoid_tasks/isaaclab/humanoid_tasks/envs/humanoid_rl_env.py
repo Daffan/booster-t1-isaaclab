@@ -29,10 +29,13 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
         self.phase_time = torch.zeros(self.num_envs, device=self.device)
         self.rwd_jointRegPrev = torch.zeros(self.num_envs, device=self.device)
         self.action_histories = deque(maxlen=3)
+        # a dict used to maintain the last step values for computing some reward functions
+        self.last_step_values = {}
 
     def reset(self, seed: int | None = None, options = None):
         output = super(HumanoidRLEnv, self).reset(seed, options)
         self.phase_time = torch.rand(self.phase_time.shape, device=self.phase_time.device) / 2 / torch.pi / self.cfg.phase_freq
+        self.last_step_values = {}
         return output
 
     def _reset_idx(self, env_ids: Sequence[int]):

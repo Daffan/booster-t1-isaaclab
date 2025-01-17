@@ -14,6 +14,7 @@ def sqrdexp(x, sigma):
 @configclass
 class HumanoidRLEnvCfg(ManagerBasedRLEnvCfg):
     phase_freq: float = 1.0
+    only_positive_rewards: bool = False
 
 
 class HumanoidRLEnv(ManagerBasedRLEnv):
@@ -49,6 +50,8 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
 
         super().step(action)
         self.phase_time = torch.fmod(self.phase_time + self.step_dt, 1.0 / self.cfg.phase_freq)
+        if self.cfg.only_positive_rewards:
+            self.reward_buf = torch.clamp(self.reward_buf, min=0.0)
         return self.obs_buf, self.reward_buf, self.reset_terminated, self.reset_time_outs, self.extras
 
     def _joint_regularization(self) -> torch.Tensor:
@@ -64,7 +67,7 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
             (asset.data.joint_pos[:, 5]), 0.25)
         # Ab/ad joint symmetry
         error += sqrdexp(
-            (asset.data.joint_pos[:, 2] + asset.data.joint_pos[:, 3]), 0.25)
+            (asset.data.joint_pos[:, 2] - asset.data.joint_pos[:, 3]), 0.25)
         # Pitch joint symmetry
         error += sqrdexp(
             (asset.data.joint_pos[:, 0] - asset.data.joint_pos[:, 1]), 0.25)

@@ -55,6 +55,17 @@ class T1WalkFlatPPORunnerCfg(T1PPORunnerCfg):
 
 
 @configclass
+class T1BoosterWalkFlatPPORunnerCfg(T1PPORunnerCfg):
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.max_iterations = 20000
+        self.experiment_name = "t1_booster_walking_flat"
+        self.policy.actor_hidden_dims = [256, 128, 128]
+        self.policy.critic_hidden_dims = [256, 128, 128]
+
+
+@configclass
 class T1KickPPORunnerCfg(T1PPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()

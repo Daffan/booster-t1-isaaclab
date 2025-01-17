@@ -1004,7 +1004,7 @@
   </link>
   <joint
     name="Left_Ankle_Roll"
-    type="fixed">
+    type="revolute">
     <origin
       xyz="0 0.00025 -0.012"
       rpy="0 0 0" />
@@ -1350,7 +1350,7 @@
   </link>
   <joint
     name="Right_Ankle_Roll"
-    type="fixed">
+    type="revolute">
     <origin
       xyz="0 -0.00025 -0.012"
       rpy="0 0 0" />

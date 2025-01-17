@@ -34,6 +34,7 @@ T1_FIXED_ARMS_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
         usd_path=os.path.join(usd_path, "T1_Sim_fixed_arms.usd"),
+        # usd_path=os.path.join(usd_path, "T1_locomotion.usd"),
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
@@ -83,15 +84,13 @@ T1_FIXED_ARMS_CFG = ArticulationCfg(
                 "Right_Hip_Yaw",
                 "Right_Knee_Pitch",
             ],
-            stiffness=30,
+            stiffness=100,
             damping=5,
         ),
         "feet": IdealPDActuatorCfg(
             joint_names_expr=["Left_Ankle_Pitch", "Right_Ankle_Pitch"],
-            stiffness= 30,
-            damping= 5,
-            effort_limit=20,
-            velocity_limit=10,
+            stiffness= 10,
+            damping= 2,
         )
     },
 )
@@ -104,7 +103,8 @@ action_dims = 12
 T1_LOCOMOTION_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path=os.path.join(usd_path, "T1_locomotion.usd"),
+        usd_path=os.path.join(usd_path, "T1_Sim_fixed_arms_12.usd"),
+        # usd_path=os.path.join(usd_path, "T1_locomotion.usd"),
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
@@ -117,7 +117,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             enable_gyroscopic_forces=True,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            enabled_self_collisions=True,
+            enabled_self_collisions=False,
             solver_position_iteration_count=4,
             solver_velocity_iteration_count=1,
             sleep_threshold=0.005,
@@ -160,7 +160,12 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             damping=5,
         ),
         "feet": IdealPDActuatorCfg(
-            joint_names_expr=["Left_Ankle_Pitch", "Right_Ankle_Pitch"],
+            joint_names_expr=[
+                "Left_Ankle_Pitch",
+                "Right_Ankle_Pitch",
+                "Left_Ankle_Roll",
+                "Right_Ankle_Roll"
+            ],
             stiffness= 50,
             damping= 1,
         )

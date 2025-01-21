@@ -21,7 +21,7 @@ def base_angular_velocity_reward(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, 
     asset: RigidObject = env.scene[asset_cfg.name]
     # compute the error
     target = env.command_manager.get_command("base_velocity")[:, 2]
-    ang_vel_error = torch.linalg.norm((target - asset.data.root_ang_vel_b[:, 2]).unsqueeze(1), dim=1)**2
+    ang_vel_error = torch.linalg.norm((target - asset.data.root_ang_vel_b[:, 2]).unsqueeze(1), dim=1) ** 2
     return torch.exp(-ang_vel_error / std)
 
 def base_linear_velocity_reward(
@@ -69,6 +69,7 @@ def base_height_reward(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, target_hei
     asset: RigidObject = env.scene[asset_cfg.name]
     # compute the error
     base_height_error = torch.square(asset.data.root_pos_w[:, 2] - target_height)
+    print(asset.data.root_pos_w[:, 2])
     return torch.exp(-base_height_error / std)
 
 def base_orientation_penalty(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
@@ -202,6 +203,7 @@ def foot_clearance_reward(
     asset: RigidObject = env.scene[asset_cfg.name]
     foot_z_target_error = torch.square(asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - target_height)
     foot_velocity_tanh = torch.tanh(tanh_mult * torch.norm(asset.data.body_lin_vel_w[:, asset_cfg.body_ids, :2], dim=2))
+    print("z target error: ", asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - target_height)
     reward = foot_z_target_error * foot_velocity_tanh
     return torch.exp(-torch.sum(reward, dim=1) / std)
 
@@ -217,6 +219,32 @@ def air_time_variance_penalty(env: HumanoidRLEnv, sensor_cfg: SceneEntityCfg) ->
     return torch.var(torch.clip(last_air_time, max=0.5), dim=1) + torch.var(
         torch.clip(last_contact_time, max=0.5), dim=1
     )
+
+def joint_regularization_exp(env: HumanoidRLEnv) -> torch.Tensor:
+    """Penalize joint symmetry"""
+    # regularize joint positions around default
+    current_error = env._joint_regularization()
+    return current_error
+
+def joint_regularization(env: HumanoidRLEnv) -> torch.Tensor:
+    """Penalize joint symmetry. The joint indices are hard-coded for the T1 humanoid robot."""
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene["robot"]
+    # regularize joint positions around default
+    error = 0.
+    # Yaw joints regularization around 0
+    default_joint_pos = asset.data.default_joint_pos
+    error += torch.square(
+        (asset.data.joint_pos[:, 4]) - default_joint_pos[:, 4])
+    error += torch.square(
+        (asset.data.joint_pos[:, 5]) - default_joint_pos[:, 5])
+    # Ab/ad joint symmetry
+    error += torch.square(
+        (asset.data.joint_pos[:, 2] - default_joint_pos[:, 2] + asset.data.joint_pos[:, 3] - default_joint_pos[:, 3]))
+    # Pitch joint symmetry
+    error += torch.square(
+        (asset.data.joint_pos[:, 0] - default_joint_pos[:, 0] + asset.data.joint_pos[:, 1] - default_joint_pos[:, 1]))
+    return error
 
 ###############  Gait Specification Reward (Part1)  ###############
 

@@ -67,8 +67,8 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
             (asset.data.joint_pos[:, 5]), 0.25)
         # Ab/ad joint symmetry
         error += sqrdexp(
-            (asset.data.joint_pos[:, 2] - asset.data.joint_pos[:, 3]), 0.25)
+            (asset.data.joint_pos[:, 2] + asset.data.joint_pos[:, 3]), 0.25)
         # Pitch joint symmetry
         error += sqrdexp(
-            (asset.data.joint_pos[:, 0] - asset.data.joint_pos[:, 1]), 0.25)
+            (asset.data.joint_pos[:, 0] + asset.data.joint_pos[:, 1]), 0.25)
         return error / 3

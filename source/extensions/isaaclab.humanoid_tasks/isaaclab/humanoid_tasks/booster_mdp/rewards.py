@@ -11,6 +11,7 @@ from omni.isaac.lab.utils.math import wrap_to_pi, euler_xyz_from_quat
 if TYPE_CHECKING:
     from omni.isaac.lab.managers import RewardTermCfg
     from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
+    from isaaclab.humanoid_tasks.booster_mdp.commands import UniformVelocityFreqCommand
 
 def tracking_lin_vel_x(
     env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float
@@ -24,7 +25,7 @@ def tracking_lin_vel_x(
     lin_vel_error = target - asset.data.root_lin_vel_b[:, 0]
     lin_vel_error = torch.square(lin_vel_error)
     return torch.exp(-lin_vel_error / std)
-
+    
 def tracking_lin_vel_y(
     env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float
 ):
@@ -58,6 +59,7 @@ def base_height(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, target_height=0.6
     """Reward for keeping the base height."""
     asset: RigidObject = env.scene[asset_cfg.name]
     base_height = asset.data.root_pos_w[:, 2]
+    # print("base_height", base_height[0].item())
     return torch.square(base_height - target_height)
 
 def collision(env: HumanoidRLEnv, sensor_cfg: SceneEntityCfg, threshold=0.1) -> torch.Tensor:
@@ -154,6 +156,7 @@ def feet_yaw_diff(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor
     asset: RigidObject = env.scene[asset_cfg.name]
     *_, feet_yaw = euler_xyz_from_quat(asset.data.body_quat_w[:, asset_cfg.body_ids].reshape(-1, 4))
     feet_yaw = feet_yaw.reshape(-1, len(asset_cfg.body_ids))
+    # print("feet_yaw", wrap_to_pi(feet_yaw[:, 0] - feet_yaw[:, 1])[0].item())
     return torch.square(wrap_to_pi(feet_yaw[:, 0] - feet_yaw[:, 1]))
 
 def feet_yaw_mean(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
@@ -161,9 +164,11 @@ def feet_yaw_mean(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor
     asset: Articulation = env.scene[asset_cfg.name]
     *_, feet_yaw = euler_xyz_from_quat(asset.data.body_quat_w[:, asset_cfg.body_ids].reshape(-1, 4))
     feet_yaw = feet_yaw.reshape(-1, len(asset_cfg.body_ids))
-    *_, base_yaw = euler_xyz_from_quat(asset.data.root_quat_w)
-    feet_yaw_mean = feet_yaw.mean(dim=-1) + torch.pi * (torch.abs(feet_yaw[:, 1] - feet_yaw[:, 0]) > torch.pi)
-    return torch.square(wrap_to_pi(base_yaw - feet_yaw_mean))
+    *_, base_yaw = euler_xyz_from_quat(asset.data.body_quat_w[:, 0])
+    # feet_yaw_mean = feet_yaw.mean(dim=-1) + torch.pi * (torch.abs(feet_yaw[:, 1] - feet_yaw[:, 0]) > torch.pi)
+    # return torch.square(wrap_to_pi(wrap_to_pi(base_yaw) - wrap_to_pi(feet_yaw_mean)))
+    # print("feet_yaw_mean", (wrap_to_pi(base_yaw) - wrap_to_pi(feet_yaw.mean(dim=-1)))[0].item())
+    return torch.square((wrap_to_pi(base_yaw) - wrap_to_pi(feet_yaw.mean(dim=-1))))
 
 def feet_distance(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, feet_distance_ref: float=0.2) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
@@ -173,7 +178,9 @@ def feet_distance(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, feet_distance_r
         torch.cos(base_yaw) * (feet_pos[:, 1, 1] - feet_pos[:, 0, 1])
         - torch.sin(base_yaw) * (feet_pos[:, 1, 0] - feet_pos[:, 0, 0])
     )
-    return torch.clip(feet_distance_ref - feet_distance, min=0.0, max=0.1)
+    # print("feet_distance", feet_distance[0].item())
+    return torch.clip(feet_distance_ref - feet_distance, min=-0., max=0.1)
+    # return torch.abs(feet_distance - feet_distance_ref)
 
 def feet_swing(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, swing_period: float=0.2) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
@@ -183,7 +190,25 @@ def feet_swing(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneE
     net_contact_forces = contact_sensor.data.net_forces_w_history
     is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > 0.1
 
-    gait_process = env.phase_time * env.cfg.phase_freq
-    left_swing = (torch.abs(gait_process - 0.25) < 0.5 * swing_period) & (env.cfg.phase_freq > 1.0e-8)
-    right_swing = (torch.abs(gait_process - 0.75) < 0.5 * swing_period) & (env.cfg.phase_freq > 1.0e-8)
+    command_term: UniformVelocityFreqCommand = env.command_manager.get_term("base_velocity")
+    gait_progress = command_term.gait_progress
+    gait_frequency = command_term.gait_frequency
+    left_swing = (torch.abs(gait_progress - 0.25) < 0.5 * swing_period) & (gait_frequency > 1.0e-8)
+    right_swing = (torch.abs(gait_progress - 0.75) < 0.5 * swing_period) & (gait_frequency > 1.0e-8)
     return (left_swing & ~is_contact[:, 0]).float() + (right_swing & ~is_contact[:, 1]).float()
+
+def feet_swing_height(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, swing_period: float=0.2, target_height: float=0.1) -> torch.Tensor:
+    asset: Articulation = env.scene[asset_cfg.name]
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    # get contact state
+    
+    net_contact_forces = contact_sensor.data.net_forces_w_history
+    is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > 0.1
+
+    command_term: UniformVelocityFreqCommand = env.command_manager.get_term("base_velocity")
+    gait_progress = command_term.gait_progress
+    gait_frequency = command_term.gait_frequency
+    left_swing = (torch.abs(gait_progress - 0.25) < 0.5 * swing_period) & (gait_frequency > 1.0e-8)
+    right_swing = (torch.abs(gait_progress - 0.75) < 0.5 * swing_period) & (gait_frequency > 1.0e-8)
+    target_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] >= target_height
+    return (left_swing & ~is_contact[:, 0] & target_height[:, 0]).float() + (right_swing & ~is_contact[:, 1] & target_height[:, 1]).float()

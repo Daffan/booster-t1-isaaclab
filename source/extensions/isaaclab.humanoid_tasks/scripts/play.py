@@ -56,6 +56,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     export_policy_as_jit,
     export_policy_as_onnx,
 )
+from omni.isaac.lab.assets import Articulation, RigidObject
 
 import isaaclab.humanoid_tasks.tasks
 
@@ -100,6 +101,7 @@ def main():
 
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)
+    action_dim = env.action_space.shape[1]
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
@@ -122,12 +124,16 @@ def main():
     if True:
         dof_targets = []
         dof_limits = env.env.env.env.scene["robot"].data.soft_joint_pos_limits.detach().cpu().numpy()[0, ...]
+        dof_pos_list = []
         contacts = []
         obss = []
 
     # reset environment
     obs, _ = env.get_observations()
     timestep = 0
+    robot_asset: Articulation = env.env.env.env.scene["robot"]
+    joint_names = robot_asset.data.joint_names
+    T = int(args_cli.video_length / action_dim)
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
@@ -136,23 +142,11 @@ def main():
             actions = policy(obs)
             
             # debug
-            # T = 80
-            # actions = torch.zeros_like(actions)
-            # if timestep // T == 0:
-            #     actions[:, 0] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            #     actions[:, 1] = -0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            # elif timestep // T == 1:
-            #     actions[:, 2] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            #     actions[:, 3] = -0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            # elif timestep // T == 2:
-            #     actions[:, 4] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            #     actions[:, 5] = -0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            # elif timestep // T == 3:
-            #     actions[:, 6] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            #     actions[:, 7] = -0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            # elif timestep // T == 4:
-            #     actions[:, 8] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            #     actions[:, 9] = -0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
+            actions = torch.zeros_like(actions)
+            joint_id = min(timestep // T, len(joint_names) - 1)
+            if timestep % T == 0:
+                print(f"Joint {joint_names[joint_id]}")
+            actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
             dof_targets.append(actions[0, :].detach().cpu().numpy())
 
             # if play isaacgym policy
@@ -161,6 +155,7 @@ def main():
             # env stepping
             obs, _, _, _ = env.step(actions)
             contacts.append(env.env.env.env.scene.sensors["contact_forces"].data.net_forces_w[0, [17, 23], 2].detach().cpu().numpy())
+            dof_pos_list.append(robot_asset.data.joint_pos[0, :].detach().cpu().numpy())
             obss.append(obs[0, :].detach().cpu().numpy())
         if args_cli.video:
             # print(float(timestep) / args_cli.video_length)
@@ -174,7 +169,7 @@ def main():
     fig, axs = plt.subplots(3, 4, figsize=(20, 12))
     dof_targets = np.stack(dof_targets)
     # dof_pos = torch.stack(dof_pos, dim=1).detach().cpu().numpy().T
-    dof_pos = np.stack(obss)[:, 13:23]
+    dof_pos = np.stack(dof_pos_list)
     for i in range(10):
         ax = axs[i//4, i%4]
         ax.plot(dof_targets[:, i], label='target')
@@ -183,7 +178,7 @@ def main():
         ax.axhline(dof_limits[i][0], color='r', linestyle='--')
         ax.axhline(dof_limits[i][1], color='r', linestyle='--')
 
-        ax.set_title(f'DOF {i}')
+        ax.set_title(f'DOF {i}: {joint_names[i]}')
         ax.legend()
 
     # save the plot
@@ -191,63 +186,63 @@ def main():
     plt.savefig(os.path.join(test_result_dir, 'dof.png'))
     plt.close()
 
-    fig, axs = plt.subplots(3, 4, figsize=(20, 12))
-    for i in range(5):
-        ax = axs[i//4, i%4]
-        ax.plot(dof_targets[:, i*2], label='target')
-        ax.plot(dof_pos[:, i*2], label='pos')
-        # horizontal line for dof limits
-        ax.axhline(dof_limits[i*2][0], color='r', linestyle='--')
-        ax.axhline(dof_limits[i*2][1], color='r', linestyle='--')
+    # fig, axs = plt.subplots(3, 4, figsize=(20, 12))
+    # for i in range(5):
+    #     ax = axs[i//4, i%4]
+    #     ax.plot(dof_targets[:, i*2], label='target')
+    #     ax.plot(dof_pos[:, i*2], label='pos')
+    #     # horizontal line for dof limits
+    #     ax.axhline(dof_limits[i*2][0], color='r', linestyle='--')
+    #     ax.axhline(dof_limits[i*2][1], color='r', linestyle='--')
 
-        ax.plot(dof_targets[:, i*2+1], label='target')
-        ax.plot(dof_pos[:, i*2+1], label='pos')
+    #     ax.plot(dof_targets[:, i*2+1], label='target')
+    #     ax.plot(dof_pos[:, i*2+1], label='pos')
 
-        ax.set_title(f'DOF {i}')
-        ax.legend()
+    #     ax.set_title(f'DOF {i}')
+    #     ax.legend()
 
     # plot contact
-    contacts = np.stack(contacts)
-    obss = np.stack(obss)
-    ax1 = axs[2, 3]
-    ax1.plot(contacts[:, 0], label='left')
-    ax2 = axs[2, 2]
-    ax2.plot(contacts[:, 1], label='right')
-    ax2.set_title('Contact')
+    # contacts = np.stack(contacts)
+    # obss = np.stack(obss)
+    # ax1 = axs[2, 3]
+    # ax1.plot(contacts[:, 0], label='left')
+    # ax2 = axs[2, 2]
+    # ax2.plot(contacts[:, 1], label='right')
+    # ax2.set_title('Contact')
 
-    ax3 = axs[2, 1]
-    ax3.plot(obss[:, -2], label='sin')
-    ax3.set_title('phase')
+    # ax3 = axs[2, 1]
+    # ax3.plot(obss[:, -2], label='sin')
+    # ax3.set_title('phase')
 
-    ax4 = axs[2, 0]
-    ax4.plot(obss[:, -1], label='cos')
-    ax4.set_title('phase')
+    # ax4 = axs[2, 0]
+    # ax4.plot(obss[:, -1], label='cos')
+    # ax4.set_title('phase')
 
-    # save the plot
-    plt.tight_layout()
-    plt.savefig(os.path.join(video_kwargs["video_folder"], 'dof_compare.png'))
-    plt.close()
+    # # save the plot
+    # plt.tight_layout()
+    # plt.savefig(os.path.join(video_kwargs["video_folder"], 'dof_compare.png'))
+    # plt.close()
 
-    # plot obs histories [38]
+    # # plot obs histories [38]
 
-    # load reference obs data
-    if os.path.exists(os.path.join(video_kwargs["video_folder"], "../../..", 'play_log.csv')):
-        reference_data = np.loadtxt(os.path.join(video_kwargs["video_folder"], "../../..", 'play_log.csv'), delimiter=",")
-        reference_obs = reference_data[:, 1:39]
-    else:
-        reference_obs = None
+    # # load reference obs data
+    # if os.path.exists(os.path.join(video_kwargs["video_folder"], "../../..", 'play_log.csv')):
+    #     reference_data = np.loadtxt(os.path.join(video_kwargs["video_folder"], "../../..", 'play_log.csv'), delimiter=",")
+    #     reference_obs = reference_data[:, 1:39]
+    # else:
+    #     reference_obs = None
 
-    fig, axs = plt.subplots(6, 7, figsize=(20, 12))
-    for i in range(38):
-        ax = axs[i//7, i%7]
-        ax.plot(obss[:, i])
-        if reference_obs is not None:
-            ax.plot(reference_obs[:, i], color='r')
-        ax.set_title(f'Obs {i}')
+    # fig, axs = plt.subplots(6, 7, figsize=(20, 12))
+    # for i in range(38):
+    #     ax = axs[i//7, i%7]
+    #     ax.plot(obss[:, i])
+    #     if reference_obs is not None:
+    #         ax.plot(reference_obs[:, i], color='r')
+    #     ax.set_title(f'Obs {i}')
     
-    plt.tight_layout()
-    plt.savefig(os.path.join(video_kwargs["video_folder"], 'obs.png'))
-    plt.close()
+    # plt.tight_layout()
+    # plt.savefig(os.path.join(video_kwargs["video_folder"], 'obs.png'))
+    # plt.close()
 
     # close the simulator
     env.close()

@@ -6,6 +6,7 @@ from omni.isaac.lab.managers import SceneEntityCfg, ManagerTermBase, Observation
 from omni.isaac.lab.sensors import ContactSensor
 
 from isaaclab.humanoid_tasks.envs import HumanoidRLEnv
+from isaaclab.humanoid_tasks.booster_mdp.commands import UniformVelocityFreqCommand
 
 def time_clock(env: HumanoidRLEnv, eps: float=1e-4) -> torch.Tensor:
     """access the time clock phase of the motion"""
@@ -19,3 +20,14 @@ def time_clock(env: HumanoidRLEnv, eps: float=1e-4) -> torch.Tensor:
         ],
     dim=1)
     return output
+
+def gait_progress_obs(env: HumanoidRLEnv) -> torch.Tensor:
+    """access the time clock phase of the motion"""
+    command_term: UniformVelocityFreqCommand = env.command_manager.get_term("base_velocity")
+    gait_progress = command_term.gait_progress
+    gait_frequency = command_term.gait_frequency
+
+    return torch.cat([
+        (torch.cos(2 * torch.pi * gait_progress) * (gait_frequency > 1.0e-8).float()).unsqueeze(-1),
+        (torch.sin(2 * torch.pi * gait_progress) * (gait_frequency > 1.0e-8).float()).unsqueeze(-1),
+    ], dim=-1)

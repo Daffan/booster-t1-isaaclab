@@ -18,13 +18,22 @@ class UniformVelocityFreqCommand(UniformVelocityCommand):
     def __init__(self, cfg: UniformVelocityFreqCommandCfg, env: HumanoidRLEnv):
         super().__init__(cfg, env)
         self.gait_frequency = torch.zeros(self.num_envs, device=self.device)
+        self.gait_progress = torch.rand(self.num_envs, device=self.device)
 
     @property
     def command(self) -> torch.Tensor:
         """The desired base velocity command in the base frame. Shape is (num_envs, 3)."""
-        return torch.cat(self.vel_command_b, self.gait_frequency.unsqueeze(-1), dim=-1)
+        return torch.cat([self.vel_command_b, self.gait_frequency.unsqueeze(-1)], dim=-1)
     
     def _resample_command(self, env_ids):
         super()._resample_command(env_ids)
         r = torch.empty(len(env_ids), device=self.device)
         self.gait_frequency[env_ids] = r.uniform_(*self.cfg.ranges.gait_frequency)
+        self.gait_progress[env_ids] = r.uniform_(0, 1)
+
+    def _update_command(self):
+        super()._update_command()
+        self.gait_progress = torch.fmod(self.gait_progress + self._env.step_dt * self.gait_frequency, 1.0)
+        # 0 for robot standing still
+        standing_env_ids = self.is_standing_env.nonzero(as_tuple=False).flatten()
+        self.gait_frequency[standing_env_ids] = 0.0

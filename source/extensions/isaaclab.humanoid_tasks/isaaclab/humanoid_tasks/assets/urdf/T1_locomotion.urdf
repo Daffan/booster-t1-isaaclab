@@ -566,7 +566,7 @@ xyz="-0.000108 -0.109573 0.000591"
   </link>
   <joint
     name="Waist"
-    type="revolute">
+    type="fixed">
     <origin
       xyz="0.0625 0 -0.1155"
       rpy="0 0 0" />
@@ -661,14 +661,6 @@ xyz="-0.000108 -0.109573 0.000591"
           rgba="0.4 0.4 0.4 0.3" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 -0.08"
-        rpy="0 0 0" />
-      <geometry>
-        <cylinder radius="0.05" length="0.16" />
-      </geometry>
-    </collision>
   </link>
   <joint
     name="Left_Hip_Roll"
@@ -683,9 +675,9 @@ xyz="-0.000108 -0.109573 0.000591"
     <axis
       xyz="1 0 0" />
     <limit
-      lower="-0.52"
+      lower="-0.3"
       upper="1.57"
-      effort="25"
+      effort="30"
       velocity="10.9" />
   </joint>
   <link
@@ -720,10 +712,10 @@ xyz="-0.000108 -0.109573 0.000591"
     </visual>
     <collision>
       <origin
-        xyz="-0.015 0 -0.135"
-        rpy="1.5707 0 0" />
+        xyz="0 0 0"
+        rpy="0 0 0" />
       <geometry>
-        <cylinder radius="0.05" length="0.08" />
+        <cylinder radius="0.05" length="0.16" />
       </geometry>
     </collision>
   </link>
@@ -777,10 +769,10 @@ xyz="-0.000108 -0.109573 0.000591"
     </visual>
     <collision>
       <origin
-        xyz="0 0 -0.13"
+        xyz="0 0 -0.12"
         rpy="0 0 0" />
       <geometry>
-        <box size="0.1 0.08 0.1" />
+        <cylinder radius="0.05" length="0.15" />
       </geometry>
     </collision>
   </link>
@@ -799,7 +791,7 @@ xyz="-0.000108 -0.109573 0.000591"
     <limit
       lower="0"
       upper="2.34"
-      effort="65"
+      effort="60"
       velocity="11.7" />
   </joint>
   <link
@@ -860,7 +852,7 @@ xyz="-0.000108 -0.109573 0.000591"
       <mass
         value="0.685" />
       <inertia
-        ixx="0.000738"
+        ixx="0.001738"
         ixy="0.000000"
         ixz="-0.000147"
         iyy="0.002385"
@@ -905,7 +897,7 @@ xyz="-0.000108 -0.109573 0.000591"
     <limit
       lower="-0.44"
       upper="0.44"
-      effort="6"
+      effort="15"
       velocity="12.4" />
   </joint>
   <link
@@ -987,14 +979,6 @@ xyz="-0.000108 -0.109573 0.000591"
           rgba="0.4 0.4 0.4 0.3" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 -0.08"
-        rpy="0 0 0" />
-      <geometry>
-        <cylinder radius="0.05" length="0.16" />
-      </geometry>
-    </collision>
   </link>
   <joint
     name="Right_Hip_Roll"
@@ -1010,8 +994,8 @@ xyz="-0.000108 -0.109573 0.000591"
       xyz="1 0 0" />
     <limit
       lower="-1.57"
-      upper="0.52"
-      effort="25"
+      upper="0.3"
+      effort="30"
       velocity="10.9" />
   </joint>
   <link
@@ -1046,10 +1030,10 @@ xyz="-0.000108 -0.109573 0.000591"
     </visual>
     <collision>
       <origin
-        xyz="-0.015 0 -0.135"
-        rpy="1.5707 0 0" />
+        xyz="0 0 0"
+        rpy="0 0 0" />
       <geometry>
-        <cylinder radius="0.05" length="0.08" />
+        <cylinder radius="0.05" length="0.16" />
       </geometry>
     </collision>
   </link>
@@ -1103,10 +1087,10 @@ xyz="-0.000108 -0.109573 0.000591"
     </visual>
     <collision>
       <origin
-        xyz="0 0 -0.13"
+        xyz="0 0 -0.12"
         rpy="0 0 0" />
       <geometry>
-        <box size="0.1 0.08 0.1" />
+        <cylinder radius="0.05" length="0.15" />
       </geometry>
     </collision>
   </link>
@@ -1125,7 +1109,7 @@ xyz="-0.000108 -0.109573 0.000591"
     <limit
       lower="0"
       upper="2.34"
-      effort="65"
+      effort="60"
       velocity="11.7" />
   </joint>
   <link
@@ -1186,7 +1170,7 @@ xyz="-0.000108 -0.109573 0.000591"
       <mass
         value="0.685" />
       <inertia
-        ixx="0.000738"
+        ixx="0.001738"
         ixy="0.000000"
         ixz="-0.000147"
         iyy="0.002385"
@@ -1231,7 +1215,7 @@ xyz="-0.000108 -0.109573 0.000591"
     <limit
       lower="-0.44"
       upper="0.44"
-      effort="6"
+      effort="15"
       velocity="12.4" />
   </joint>
 </robot>

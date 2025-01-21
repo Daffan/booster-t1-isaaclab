@@ -34,4 +34,8 @@ class ClippedJointPositionAction(mdp.JointPositionAction):
 
     def apply_actions(self):
         # apply the processed actions
-        self._asset.set_joint_position_target(self._processed_actions.clamp(-self.cfg.clip, self.cfg.clip), joint_ids=self._joint_ids)
+        # print("actions", self._processed_actions, self._processed_actions.clamp(-self.cfg.clip, self.cfg.clip))
+        self._asset.set_joint_position_target(
+            self._processed_actions.clamp(-self.cfg.clip, self.cfg.clip),
+            joint_ids=self._joint_ids
+        )

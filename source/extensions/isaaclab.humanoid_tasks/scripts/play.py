@@ -186,64 +186,6 @@ def main():
     plt.savefig(os.path.join(test_result_dir, 'dof.png'))
     plt.close()
 
-    # fig, axs = plt.subplots(3, 4, figsize=(20, 12))
-    # for i in range(5):
-    #     ax = axs[i//4, i%4]
-    #     ax.plot(dof_targets[:, i*2], label='target')
-    #     ax.plot(dof_pos[:, i*2], label='pos')
-    #     # horizontal line for dof limits
-    #     ax.axhline(dof_limits[i*2][0], color='r', linestyle='--')
-    #     ax.axhline(dof_limits[i*2][1], color='r', linestyle='--')
-
-    #     ax.plot(dof_targets[:, i*2+1], label='target')
-    #     ax.plot(dof_pos[:, i*2+1], label='pos')
-
-    #     ax.set_title(f'DOF {i}')
-    #     ax.legend()
-
-    # plot contact
-    # contacts = np.stack(contacts)
-    # obss = np.stack(obss)
-    # ax1 = axs[2, 3]
-    # ax1.plot(contacts[:, 0], label='left')
-    # ax2 = axs[2, 2]
-    # ax2.plot(contacts[:, 1], label='right')
-    # ax2.set_title('Contact')
-
-    # ax3 = axs[2, 1]
-    # ax3.plot(obss[:, -2], label='sin')
-    # ax3.set_title('phase')
-
-    # ax4 = axs[2, 0]
-    # ax4.plot(obss[:, -1], label='cos')
-    # ax4.set_title('phase')
-
-    # # save the plot
-    # plt.tight_layout()
-    # plt.savefig(os.path.join(video_kwargs["video_folder"], 'dof_compare.png'))
-    # plt.close()
-
-    # # plot obs histories [38]
-
-    # # load reference obs data
-    # if os.path.exists(os.path.join(video_kwargs["video_folder"], "../../..", 'play_log.csv')):
-    #     reference_data = np.loadtxt(os.path.join(video_kwargs["video_folder"], "../../..", 'play_log.csv'), delimiter=",")
-    #     reference_obs = reference_data[:, 1:39]
-    # else:
-    #     reference_obs = None
-
-    # fig, axs = plt.subplots(6, 7, figsize=(20, 12))
-    # for i in range(38):
-    #     ax = axs[i//7, i%7]
-    #     ax.plot(obss[:, i])
-    #     if reference_obs is not None:
-    #         ax.plot(reference_obs[:, i], color='r')
-    #     ax.set_title(f'Obs {i}')
-    
-    # plt.tight_layout()
-    # plt.savefig(os.path.join(video_kwargs["video_folder"], 'obs.png'))
-    # plt.close()
-
     # close the simulator
     env.close()
 

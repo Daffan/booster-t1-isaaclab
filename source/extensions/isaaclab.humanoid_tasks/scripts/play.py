@@ -71,6 +71,10 @@ def main():
     env_cfg.viewer.eye=(12.5/3, 12.5/3, 7.5/3)
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
+    env_cfg.commands.base_velocity.ranges.lin_vel_x = (1.0, 1.0)
+    env_cfg.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
+    env_cfg.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
     log_root_path = os.path.abspath(log_root_path)
@@ -142,11 +146,11 @@ def main():
             actions = policy(obs)
             
             # debug
-            actions = torch.zeros_like(actions)
-            joint_id = min(timestep // T, len(joint_names) - 1)
-            if timestep % T == 0:
-                print(f"Joint {joint_names[joint_id]}")
-            actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
+            # actions = torch.zeros_like(actions)
+            # joint_id = min(timestep // T, len(joint_names) - 1)
+            # if timestep % T == 0:
+            #     print(f"Joint {joint_names[joint_id]}")
+            # actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
             dof_targets.append(actions[0, :].detach().cpu().numpy())
 
             # if play isaacgym policy
@@ -170,7 +174,7 @@ def main():
     dof_targets = np.stack(dof_targets)
     # dof_pos = torch.stack(dof_pos, dim=1).detach().cpu().numpy().T
     dof_pos = np.stack(dof_pos_list)
-    for i in range(10):
+    for i in range(action_dim):
         ax = axs[i//4, i%4]
         ax.plot(dof_targets[:, i], label='target')
         ax.plot(dof_pos[:, i], label='pos')
@@ -184,6 +188,20 @@ def main():
     # save the plot
     plt.tight_layout()
     plt.savefig(os.path.join(test_result_dir, 'dof.png'))
+    plt.close()
+
+    # plot all the observations
+    fig, axs = plt.subplots(8, 8, figsize=(20, 20))
+    obss = np.stack(obss)
+    np.save(os.path.join(test_result_dir, 'obs.npy'), obss)
+    for i in range(obss.shape[1]):
+        ax = axs[i//8, i%8]
+        ax.plot(obss[:, i])
+        ax.set_title(f'Obs {i}')
+
+    # save the plot
+    plt.tight_layout()
+    plt.savefig(os.path.join(test_result_dir, 'obs.png'))
     plt.close()
 
     # close the simulator

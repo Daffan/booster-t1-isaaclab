@@ -70,6 +70,10 @@ class ActorCritic(nn.Module):
         # self.init_memory_weights(self.memory_a, 0.001, 0.)
         # self.init_memory_weights(self.memory_c, 0.001, 0.)
 
+        # init weights for actor and critic last layer output zeros
+        for params in self.actor[-1].parameters():
+            params.data.zero_()
+
     @staticmethod
     # not used at the moment
     def init_weights(sequential, scales):

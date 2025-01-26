@@ -26,7 +26,7 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 
 import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
 
-from isaaclab.humanoid_tasks.robots.t1 import T1_FIXED_ARMS_CFG, T1_LOCOMOTION_CFG, T1_FIXED_ARMS_BOOSTER_CFG  # isort: skip
+from isaaclab.humanoid_tasks.robots.t1 import T1_FIXED_ARMS_CFG, T1_LOCOMOTION_CFG  # isort: skip
 import isaaclab.humanoid_tasks.mdp as hmdp
 import isaaclab.humanoid_tasks.booster_mdp as bmdp
 from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg
@@ -370,14 +370,23 @@ class RewardsCfg:
         weight=-10.0,
         params={},
     )
+    # feet_swing = RewardTermCfg(
+    #     func=bmdp.feet_swing_height,
+    #     weight=2.0,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
+    #         "swing_period": 0.2,
+    #         "target_height": 0.08
+    #     }
+    # )
     feet_swing = RewardTermCfg(
-        func=bmdp.feet_swing_height,
+        func=bmdp.feet_swing,
         weight=2.0,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
             "swing_period": 0.2,
-            "target_height": 0.08
         }
     )
     feet_distance = RewardTermCfg(

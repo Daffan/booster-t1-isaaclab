@@ -117,7 +117,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             enable_gyroscopic_forces=True,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            enabled_self_collisions=False,
+            enabled_self_collisions=True,
             solver_position_iteration_count=4,
             solver_velocity_iteration_count=1,
             sleep_threshold=0.005,
@@ -166,7 +166,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
                 "Right_Hip_Yaw",
                 "Right_Knee_Pitch",
             ],
-            stiffness=30,
+            stiffness=100,
             damping=5,
         ),
         "feet": IdealPDActuatorCfg(
@@ -176,8 +176,8 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
                 "Left_Ankle_Roll",
                 "Right_Ankle_Roll"
             ],
-            stiffness= 5,
-            damping= 1,
+            stiffness=15,
+            damping=1,
         )
     },
 )

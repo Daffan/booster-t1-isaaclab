@@ -29,12 +29,6 @@ from omni.isaac.lab.actuators import DelayedPDActuatorCfg, RemotizedPDActuatorCf
 """
 Configuration for the Booster T1 Humanoid robot
 action_dims = 23
-['head_AAHead_yaw', 'head_Head_pitch', 'Right_Shoulder_Pitch', 'Right_Shoulder_Roll', 'Right_Elbow_Pitch', 
-'Right_Elbow_Yaw', 'Left_Shoulder_Pitch', 'Left_Shoulder_Roll', 'Left_Elbow_Pitch', 'Left_Elbow_Yaw', 
-'torso_Waist', 'leg_Left_Hip_Pitch', 'leg_Left_Hip_Roll', 'leg_Left_Hip_Yaw', 'leg_Left_Knee_Pitch', 
-'leg_Left_Ankle_Pitch', 'leg_Left_Ankle_Roll', 'leg_Right_Hip_Pitch', 'leg_Right_Hip_Roll', 'leg_Right_Hip_Yaw', 
-'leg_Right_Knee_Pitch', 'leg_Right_Ankle_Pitch', 'leg_Right_Ankle_Roll']
-
 ['AAHead_yaw', 'Left_Shoulder_Pitch', 'Right_Shoulder_Pitch', 'Waist', 'Head_pitch', 
 'Left_Shoulder_Roll', 'Right_Shoulder_Roll', 'Left_Hip_Pitch', 'Right_Hip_Pitch', 
 'Left_Elbow_Pitch', 'Right_Elbow_Pitch', 'Left_Hip_Roll', 'Right_Hip_Roll', 'Left_Elbow_Yaw', 
@@ -58,7 +52,7 @@ T1_CFG = ArticulationCfg(
             enable_gyroscopic_forces=True,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            enabled_self_collisions=False,
+            enabled_self_collisions=True,
             solver_position_iteration_count=4,
             solver_velocity_iteration_count=0,  # what does this affect?
             sleep_threshold=0.005,
@@ -71,19 +65,25 @@ T1_CFG = ArticulationCfg(
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.75),
         joint_pos={
+            "Right_Shoulder_Pitch": 0.2,
+            "Right_Shoulder_Roll": 1.35,
+            "Right_Elbow_Pitch": 0.0,
+            "Right_Elbow_Yaw": 0.5,
+            "Left_Shoulder_Pitch": 0.2,
+            "Left_Shoulder_Roll": -1.35,
+            "Left_Elbow_Pitch": 0.0,
+            "Left_Elbow_Yaw": -0.5,
             'Waist': 0.0,
-            'Left_Hip_Pitch': 0.0,
+            'Left_Hip_Pitch': -0.1,
             'Left_Hip_Roll': 0.0,
             'Left_Hip_Yaw': 0.0,
-            'Left_Knee_Pitch': 0.0,
-            'Left_Ankle_Pitch': 0.0,
-            'Right_Hip_Pitch': 0.0,
+            'Left_Knee_Pitch': 0.2,
+            'Left_Ankle_Pitch': -0.1,
+            'Right_Hip_Pitch': -0.1,
             'Right_Hip_Roll': 0.0,
             'Right_Hip_Yaw': 0.0,
-            'Right_Knee_Pitch': 0.0,
-            'Right_Ankle_Pitch': 0.0,
-            'Left_Ankle_Roll': 0.0,
-            'Right_Ankle_Roll': 0.0,
+            'Right_Knee_Pitch': 0.2,
+            'Right_Ankle_Pitch': -0.1,
         }
     ),
     actuators={
@@ -106,13 +106,13 @@ T1_CFG = ArticulationCfg(
                 "Left_Elbow_Pitch",
                 "Left_Elbow_Yaw",
             ],
-            stiffness=100,
+            stiffness=150,
             damping=8,
         ),
         "waist": IdealPDActuatorCfg(
             joint_names_expr=["Waist"],
-            stiffness=30,
-            damping=5,
+            stiffness=100,
+            damping=15,
         ),
         "legs": IdealPDActuatorCfg(
             joint_names_expr=[
@@ -125,7 +125,7 @@ T1_CFG = ArticulationCfg(
                 "Right_Hip_Yaw",
                 "Right_Knee_Pitch",
             ],
-            stiffness=30,
+            stiffness=100,
             damping=5,
         ),
         "feet": IdealPDActuatorCfg(
@@ -135,10 +135,8 @@ T1_CFG = ArticulationCfg(
                 "Left_Ankle_Roll",
                 "Right_Ankle_Roll"
             ],
-            stiffness=15,
-            damping=2,
-            # effort_limit=20,
-            # velocity_limit=10,
+            stiffness=25,
+            damping=1,
         )
     },
 )

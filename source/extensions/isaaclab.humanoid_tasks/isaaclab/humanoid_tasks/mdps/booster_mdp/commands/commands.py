@@ -55,7 +55,6 @@ class UniformVelocityFreqCommand(UniformVelocityCommand):
 
     def _update_command(self):
         super()._update_command()
-        self.gait_progress = torch.fmod(self.gait_progress + self._env.step_dt * self.gait_frequency, 1.0)
         # 0 for robot standing still
         standing_env_ids = self.is_standing_env.nonzero(as_tuple=False).flatten()
         self.gait_frequency[standing_env_ids] = 0.0
@@ -65,6 +64,8 @@ class UniformVelocityFreqCommand(UniformVelocityCommand):
                                 (1 - self.cfg.filter_weight) * self.filtered_lin_vel
         self.filtered_ang_vel = self.cfg.filter_weight * self.robot.data.root_ang_vel_w + \
                                 (1 - self.cfg.filter_weight) * self.filtered_ang_vel
+
+        self.gait_progress = torch.fmod(self.gait_progress + self.gait_frequency * self._env.step_dt, 1.0)
         
     def get_filtered_velocities(self):
         return self.filtered_lin_vel, self.filtered_ang_vel

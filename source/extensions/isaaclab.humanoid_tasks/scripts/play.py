@@ -69,6 +69,10 @@ def main():
     )
     env_cfg.viewer.env_index = 0
     env_cfg.viewer.eye=(12.5/3, 12.5/3, 7.5/3)
+    env_cfg.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.0)
+    env_cfg.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
+    env_cfg.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+    env_cfg.commands.base_velocity.ranges.gait_frequency = (2.0, 2.0)
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
     env_cfg.commands.base_velocity.ranges.lin_vel_x = (1.0, 1.0)

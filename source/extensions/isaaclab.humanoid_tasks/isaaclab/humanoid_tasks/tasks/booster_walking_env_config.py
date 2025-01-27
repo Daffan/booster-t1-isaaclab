@@ -27,8 +27,8 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
 
 from isaaclab.humanoid_tasks.robots.t1 import T1_FIXED_ARMS_CFG, T1_LOCOMOTION_CFG  # isort: skip
-import isaaclab.humanoid_tasks.mdp as hmdp
-import isaaclab.humanoid_tasks.booster_mdp as bmdp
+import isaaclab.humanoid_tasks.mdps.mdp as hmdp
+import isaaclab.humanoid_tasks.mdps.booster_mdp as bmdp
 from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg
 
 

@@ -11,7 +11,7 @@ from omni.isaac.lab.utils.math import wrap_to_pi, euler_xyz_from_quat
 if TYPE_CHECKING:
     from omni.isaac.lab.managers import RewardTermCfg
     from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
-    from isaaclab.humanoid_tasks.booster_mdp.commands import UniformVelocityFreqCommand
+    from isaaclab.humanoid_tasks.mdps.booster_mdp.commands import UniformVelocityFreqCommand
 
 def tracking_lin_vel_x(
     env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float
@@ -232,6 +232,6 @@ def standstill(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneE
     gait_frequency = command_term.gait_frequency
 
     net_contact_forces = contact_sensor.data.net_forces_w_history
-    is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > 0.1
+    is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > 0.01
     # encourage both feet making contact with the ground
     return is_contact.all(dim=-1) * (gait_frequency < 1.0e-8)

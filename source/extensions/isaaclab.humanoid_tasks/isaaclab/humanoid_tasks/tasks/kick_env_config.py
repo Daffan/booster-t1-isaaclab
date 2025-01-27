@@ -29,8 +29,8 @@ import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
 from isaaclab.humanoid_tasks.robots.t1 import T1_FIXED_ARMS_CFG  # isort: skip
 from isaaclab.humanoid_tasks.robots.t1_wb import T1_CFG  # isort: skip
 from isaaclab.humanoid_tasks.robots.ball import BALL_CFG  # isort: skip
-import isaaclab.humanoid_tasks.mdp as hmdp
-import isaaclab.humanoid_tasks.kick_mdp as kmdp
+import isaaclab.humanoid_tasks.mdps.mdp as hmdp
+import isaaclab.humanoid_tasks.mdps.kick_mdp as kmdp
 from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg
 
 

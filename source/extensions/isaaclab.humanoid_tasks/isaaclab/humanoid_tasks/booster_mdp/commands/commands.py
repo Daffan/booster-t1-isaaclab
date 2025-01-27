@@ -33,7 +33,7 @@ class UniformVelocityFreqCommand(UniformVelocityCommand):
 
     def _update_command(self):
         super()._update_command()
-        self.gait_progress = torch.fmod(self.gait_progress + self._env.step_dt * self.gait_frequency, 1.0)
         # 0 for robot standing still
         standing_env_ids = self.is_standing_env.nonzero(as_tuple=False).flatten()
         self.gait_frequency[standing_env_ids] = 0.0
+        self.gait_progress = torch.fmod(self.gait_progress + self._env.step_dt * self.gait_frequency, 1.0)

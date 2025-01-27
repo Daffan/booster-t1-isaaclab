@@ -69,6 +69,10 @@ def main():
     )
     env_cfg.viewer.env_index = 0
     env_cfg.viewer.eye=(12.5/3, 12.5/3, 7.5/3)
+    env_cfg.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.0)
+    env_cfg.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
+    env_cfg.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+    env_cfg.commands.base_velocity.ranges.gait_frequency = (2.0, 2.0)
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
     # specify directory for logging experiments
@@ -142,11 +146,11 @@ def main():
             actions = policy(obs)
             
             # debug
-            actions = torch.zeros_like(actions)
-            joint_id = min(timestep // T, len(joint_names) - 1)
-            if timestep % T == 0:
-                print(f"Joint {joint_names[joint_id]}")
-            actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
+            # actions = torch.zeros_like(actions)
+            # joint_id = min(timestep // T, len(joint_names) - 1)
+            # if timestep % T == 0:
+            #     print(f"Joint {joint_names[joint_id]}")
+            # actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
             dof_targets.append(actions[0, :].detach().cpu().numpy())
 
             # if play isaacgym policy

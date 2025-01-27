@@ -380,6 +380,14 @@ class RewardsCfg:
     #         "target_height": 0.08
     #     }
     # )
+    # standstill = RewardTermCfg(
+    #     func=bmdp.standstill,
+    #     weight=1.0,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot"),
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
+    #     }
+    # )
     feet_swing = RewardTermCfg(
         func=bmdp.feet_swing,
         weight=2.0,

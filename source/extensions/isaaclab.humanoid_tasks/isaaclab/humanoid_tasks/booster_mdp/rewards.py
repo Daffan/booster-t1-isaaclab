@@ -212,3 +212,15 @@ def feet_swing_height(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg:
     right_swing = (torch.abs(gait_progress - 0.75) < 0.5 * swing_period) & (gait_frequency > 1.0e-8)
     target_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] >= target_height
     return (left_swing & ~is_contact[:, 0] & target_height[:, 0]).float() + (right_swing & ~is_contact[:, 1] & target_height[:, 1]).float()
+
+def standstill(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+    asset: Articulation = env.scene[asset_cfg.name]
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+    command_term: UniformVelocityFreqCommand = env.command_manager.get_term("base_velocity")
+    gait_frequency = command_term.gait_frequency
+
+    net_contact_forces = contact_sensor.data.net_forces_w_history
+    is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > 0.01
+    # encourage both feet making contact with the ground
+    return is_contact.all(dim=-1) * (gait_frequency < 1.0e-8)

@@ -36,7 +36,17 @@ gym.register(
     entry_point="isaaclab.humanoid_tasks.envs:HumanoidRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": kick_env_config.RLEnvCfg,
+        "env_cfg_entry_point": kick_env_config.WholeBodyKick,
+        "rsl_rl_cfg_entry_point": ppo_config.T1KickPPORunnerCfg,
+    },
+)
+
+gym.register(
+    id="RL-LowerBody-t1-kick-v0",
+    entry_point="isaaclab.humanoid_tasks.envs:HumanoidRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": kick_env_config.LowerBodyKick,
         "rsl_rl_cfg_entry_point": ppo_config.T1KickPPORunnerCfg,
     },
 )

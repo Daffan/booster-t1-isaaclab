@@ -23,6 +23,8 @@ parser.add_argument(
 )
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser.add_argument("--viz_joints", action="store_true", default=False, help="Visualize joint.")
+parser.add_argument("--viewer_scale", type=float, default=3.0, help="Viewer scale.")
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -68,16 +70,12 @@ def main():
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
     env_cfg.viewer.env_index = 0
-    env_cfg.viewer.eye=(12.5/3, 12.5/3, 7.5/3)
-    env_cfg.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.0)
+    env_cfg.viewer.eye=(12.5/args_cli.viewer_scale, 12.5/args_cli.viewer_scale, 7.5/args_cli.viewer_scale)
+    env_cfg.commands.base_velocity.ranges.lin_vel_x = (1.5, 1.5)
     env_cfg.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-    env_cfg.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+    env_cfg.commands.base_velocity.ranges.ang_vel_z = (1.0, 1.0)
     env_cfg.commands.base_velocity.ranges.gait_frequency = (2.0, 2.0)
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
-
-    env_cfg.commands.base_velocity.ranges.lin_vel_x = (1.0, 1.0)
-    env_cfg.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-    env_cfg.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
@@ -150,15 +148,13 @@ def main():
             actions = policy(obs)
             
             # debug
-            # actions = torch.zeros_like(actions)
-            # joint_id = min(timestep // T, len(joint_names) - 1)
-            # if timestep % T == 0:
-            #     print(f"Joint {joint_names[joint_id]}")
-            # actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
+            if args_cli.viz_joints:
+                actions = torch.zeros_like(actions)
+                joint_id = min(timestep // T, len(joint_names) - 1)
+                if timestep % T == 0:
+                    print(f"Joint {joint_names[joint_id]}")
+                actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
             dof_targets.append(actions[0, :].detach().cpu().numpy())
-
-            # if play isaacgym policy
-            # actions = actions[:, [0, 5, 1, 6, 2, 7, 3, 8, 4, 9]]
 
             # env stepping
             obs, _, _, _ = env.step(actions)
@@ -174,12 +170,13 @@ def main():
 
     # plot dof pos
     import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(3, 4, figsize=(20, 12))
+    fig, axs = plt.subplots(5, 5, figsize=(20, 12))
     dof_targets = np.stack(dof_targets)
     # dof_pos = torch.stack(dof_pos, dim=1).detach().cpu().numpy().T
     dof_pos = np.stack(dof_pos_list)
-    for i in range(action_dim):
-        ax = axs[i//4, i%4]
+    dim = min(25, action_dim)
+    for i in range(dim):
+        ax = axs[i//5, i%5]
         ax.plot(dof_targets[:, i], label='target')
         ax.plot(dof_pos[:, i], label='pos')
         # horizontal line for dof limits
@@ -198,7 +195,8 @@ def main():
     fig, axs = plt.subplots(8, 8, figsize=(20, 20))
     obss = np.stack(obss)
     np.save(os.path.join(test_result_dir, 'obs.npy'), obss)
-    for i in range(obss.shape[1]):
+    dim = min(64, obss.shape[1])
+    for i in range(dim):
         ax = axs[i//8, i%8]
         ax.plot(obss[:, i])
         ax.set_title(f'Obs {i}')

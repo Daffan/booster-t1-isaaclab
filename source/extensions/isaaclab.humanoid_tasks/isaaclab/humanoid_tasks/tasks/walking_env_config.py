@@ -270,27 +270,37 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-multiplier = 2.0
+# multiplier = 2.0
 @configclass
 class RewardsCfg:
     # survival = RewardTermCfg(
     #     func=bmdp.survival,
     #     weight=0.5 * multiplier
     # )
-    tracking_lin_vel_x = RewardTermCfg(
-        func=bmdp.tracking_lin_vel_x,
-        weight=2.0 * multiplier,
-        params={"std": 0.2, "asset_cfg": SceneEntityCfg("robot")},
+    # tracking_lin_vel_x = RewardTermCfg(
+    #     func=bmdp.tracking_lin_vel_x,
+    #     weight=2.0 * multiplier,
+    #     params={"std": 0.2, "asset_cfg": SceneEntityCfg("robot")},
+    # )
+    # tracking_lin_vel_y = RewardTermCfg(
+    #     func=bmdp.tracking_lin_vel_y,
+    #     weight=1.0 * multiplier,
+    #     params={"std": 0.2, "asset_cfg": SceneEntityCfg("robot")},
+    # )
+    # tracking_ang_vel = RewardTermCfg(
+    #     func=bmdp.tracking_ang_vel,
+    #     weight=1.0 * multiplier,
+    #     params={"std": 0.3, "asset_cfg": SceneEntityCfg("robot")},
+    # )
+    base_angular_velocity = RewardTermCfg(
+        func=hmdp.tracking_ang_vel_reward,
+        weight=1.0 * 2,
+        params={"std": 0.5, "asset_cfg": SceneEntityCfg("robot")},
     )
-    tracking_lin_vel_y = RewardTermCfg(
-        func=bmdp.tracking_lin_vel_y,
-        weight=1.0 * multiplier,
-        params={"std": 0.2, "asset_cfg": SceneEntityCfg("robot")},
-    )
-    tracking_ang_vel = RewardTermCfg(
-        func=bmdp.tracking_ang_vel,
-        weight=1.0 * multiplier,
-        params={"std": 0.3, "asset_cfg": SceneEntityCfg("robot")},
+    base_linear_velocity = RewardTermCfg(
+        func=hmdp.tracking_lin_vel_reward,
+        weight=2.0 * 2,
+        params={"std": 0.5, "asset_cfg": SceneEntityCfg("robot")},
     )
     # feet_swing = RewardTermCfg(
     #     func=bmdp.feet_swing_height,

@@ -35,13 +35,13 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
 
     def reset(self, seed: int | None = None, options = None):
         output = super(HumanoidRLEnv, self).reset(seed, options)
-        self.phase_time = torch.rand(self.phase_time.shape, device=self.phase_time.device) / 2 / torch.pi / self.cfg.phase_freq
+        self.phase_time = torch.rand(self.phase_time.shape, device=self.phase_time.device)
         self.last_step_values = {}
         return output
 
     def _reset_idx(self, env_ids: Sequence[int]):
         out = super()._reset_idx(env_ids)
-        self.phase_time[env_ids] = torch.rand(len(env_ids), device=self.phase_time.device) / 2 / torch.pi / self.cfg.phase_freq
+        self.phase_time[env_ids] = torch.rand(len(env_ids), device=self.phase_time.device)
 
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         # compute rwd_jointRegPrev for potential-based reward
@@ -49,7 +49,7 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
         self.rwd_jointRegPrev = self._joint_regularization()
 
         super().step(action)
-        self.phase_time = torch.fmod(self.phase_time + self.step_dt, 1.0 / self.cfg.phase_freq)
+        self.phase_time = torch.fmod(self.phase_time + self.step_dt / self.cfg.phase_freq, 1.0)
         if self.cfg.only_positive_rewards:
             self.reward_buf = torch.clamp(self.reward_buf, min=0.0)
         return self.obs_buf, self.reward_buf, self.reset_terminated, self.reset_time_outs, self.extras

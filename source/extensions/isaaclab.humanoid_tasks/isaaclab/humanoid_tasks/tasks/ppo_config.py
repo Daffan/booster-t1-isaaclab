@@ -88,5 +88,7 @@ class T1KickPPORunnerCfg(T1PPORunnerCfg):
 
         self.max_iterations = 20000
         self.experiment_name = "t1_kick"
-        self.policy.actor_hidden_dims = [256, 128, 128]
-        self.policy.critic_hidden_dims = [256, 128, 128]
+        self.policy.actor_hidden_dims = [512, 256, 128]
+        self.policy.critic_hidden_dims = [512, 256, 128]
+
+        self.algorithm.value_loss_coef = 2.0

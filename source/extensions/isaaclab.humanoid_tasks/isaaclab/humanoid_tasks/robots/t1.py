@@ -166,7 +166,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
                 "Right_Hip_Yaw",
                 "Right_Knee_Pitch",
             ],
-            stiffness=100,
+            stiffness=150,
             damping=5,
         ),
         "feet": IdealPDActuatorCfg(
@@ -176,7 +176,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
                 "Left_Ankle_Roll",
                 "Right_Ankle_Roll"
             ],
-            stiffness=15,
+            stiffness=25,
             damping=1,
         )
     },

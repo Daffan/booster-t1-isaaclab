@@ -57,7 +57,7 @@ T1_CFG = ArticulationCfg(
             solver_velocity_iteration_count=0,  # what does this affect?
             sleep_threshold=0.005,
             stabilization_threshold=0.001,
-            fix_root_link=False
+            fix_root_link=True
         ),
         copy_from_source=False,
     ),

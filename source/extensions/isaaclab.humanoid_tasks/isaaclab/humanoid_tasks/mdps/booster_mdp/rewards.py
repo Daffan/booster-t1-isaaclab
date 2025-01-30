@@ -11,7 +11,7 @@ from omni.isaac.lab.utils.math import wrap_to_pi, euler_xyz_from_quat
 if TYPE_CHECKING:
     from omni.isaac.lab.managers import RewardTermCfg
     from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
-    from isaaclab.humanoid_tasks.booster_mdp.commands import UniformVelocityFreqCommand
+    from isaaclab.humanoid_tasks.mdps.booster_mdp.commands import UniformVelocityFreqCommand
 
 def tracking_lin_vel_x(
     env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float
@@ -19,10 +19,11 @@ def tracking_lin_vel_x(
     """Reward tracking of linear velocity commands (x axes) using abs exponential kernel."""
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
+    command_term = env.command_manager.get_term("base_velocity")
     # compute the error
     target = env.command_manager.get_command("base_velocity")[:, 0]
-    # TODO: booster_gym used a running average of the linear velocity, but we don't have that here
-    lin_vel_error = target - asset.data.root_lin_vel_b[:, 0]
+    filtered_lin_vel, _ = command_term.get_filtered_velocities()
+    lin_vel_error = target - filtered_lin_vel[:, 0]
     lin_vel_error = torch.square(lin_vel_error)
     return torch.exp(-lin_vel_error / std)
     
@@ -32,10 +33,11 @@ def tracking_lin_vel_y(
     """Reward tracking of linear velocity commands (y axes) using abs exponential kernel."""
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
+    command_term = env.command_manager.get_term("base_velocity")
     # compute the error
     target = env.command_manager.get_command("base_velocity")[:, 1]
-    # TODO: booster_gym used a running average of the linear velocity, but we don't have that here
-    lin_vel_error = target - asset.data.root_lin_vel_b[:, 1]
+    filtered_lin_vel, _ = command_term.get_filtered_velocities()
+    lin_vel_error = target - filtered_lin_vel[:, 1]
     lin_vel_error = torch.square(lin_vel_error)
     return torch.exp(-lin_vel_error / std)
 
@@ -45,9 +47,11 @@ def tracking_ang_vel(
     """Reward tracking of angular velocity commands using abs exponential kernel."""
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
+    command_term = env.command_manager.get_term("base_velocity")
     # compute the error
     target = env.command_manager.get_command("base_velocity")[:, 2]
-    ang_vel_error = target - asset.data.root_ang_vel_b[:, 2]
+    _, filtered_ang_vel = command_term.get_filtered_velocities()
+    ang_vel_error = target - filtered_ang_vel[:, 2]
     ang_vel_error = torch.square(ang_vel_error)
     return torch.exp(-ang_vel_error / std)
 
@@ -212,3 +216,22 @@ def feet_swing_height(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg:
     right_swing = (torch.abs(gait_progress - 0.75) < 0.5 * swing_period) & (gait_frequency > 1.0e-8)
     target_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] >= target_height
     return (left_swing & ~is_contact[:, 0] & target_height[:, 0]).float() + (right_swing & ~is_contact[:, 1] & target_height[:, 1]).float()
+
+def joint_position(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    asset: Articulation = env.scene[asset_cfg.name]
+    command_term: UniformVelocityFreqCommand = env.command_manager.get_term("base_velocity")
+    gait_frequency = command_term.gait_frequency
+    # only apply when commanded to standstill
+    return torch.linalg.norm((asset.data.joint_pos - asset.data.default_joint_pos), dim=1) ** 2 * (gait_frequency < 1.0e-8)
+
+def standstill(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+    asset: Articulation = env.scene[asset_cfg.name]
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+    command_term: UniformVelocityFreqCommand = env.command_manager.get_term("base_velocity")
+    gait_frequency = command_term.gait_frequency
+
+    net_contact_forces = contact_sensor.data.net_forces_w_history
+    is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > 0.01
+    # encourage both feet making contact with the ground
+    return is_contact.all(dim=-1) * (gait_frequency < 1.0e-8)

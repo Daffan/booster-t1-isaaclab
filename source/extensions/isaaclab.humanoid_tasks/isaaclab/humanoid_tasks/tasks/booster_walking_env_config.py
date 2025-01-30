@@ -27,8 +27,8 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
 
 from isaaclab.humanoid_tasks.robots.t1 import T1_FIXED_ARMS_CFG, T1_LOCOMOTION_CFG  # isort: skip
-import isaaclab.humanoid_tasks.mdp as hmdp
-import isaaclab.humanoid_tasks.booster_mdp as bmdp
+import isaaclab.humanoid_tasks.mdps.mdp as hmdp
+import isaaclab.humanoid_tasks.mdps.booster_mdp as bmdp
 from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg
 
 
@@ -254,21 +254,21 @@ class RewardsCfg:
         weight=0.25 * multiplier,
         params={}
     )
-    # tracking_lin_vel_x = RewardTermCfg(
-    #     func=bmdp.tracking_lin_vel_x,
-    #     weight=1.0 * multiplier,
-    #     params={"asset_cfg": SceneEntityCfg("robot"), "std": 0.25}
-    # )
-    # tracking_lin_vel_y = RewardTermCfg(
-    #     func=bmdp.tracking_lin_vel_y,
-    #     weight=1.0 * multiplier,
-    #     params={"asset_cfg": SceneEntityCfg("robot"), "std": 0.25}
-    # )
-    base_linear_velocity = RewardTermCfg(
-        func=hmdp.tracking_lin_vel_reward,
-        weight=4.0 * multiplier,
-        params={"std": 0.5, "asset_cfg": SceneEntityCfg("robot")},
+    tracking_lin_vel_x = RewardTermCfg(
+        func=bmdp.tracking_lin_vel_x,
+        weight=1.0 * multiplier,
+        params={"asset_cfg": SceneEntityCfg("robot"), "std": 0.25}
     )
+    tracking_lin_vel_y = RewardTermCfg(
+        func=bmdp.tracking_lin_vel_y,
+        weight=1.0 * multiplier,
+        params={"asset_cfg": SceneEntityCfg("robot"), "std": 0.25}
+    )
+    # base_linear_velocity = RewardTermCfg(
+    #     func=hmdp.tracking_lin_vel_reward,
+    #     weight=4.0 * multiplier,
+    #     params={"std": 0.5, "asset_cfg": SceneEntityCfg("robot")},
+    # )
     tracking_ang_vel = RewardTermCfg(
         func=bmdp.tracking_ang_vel,
         weight=0.5 * multiplier,
@@ -285,7 +285,7 @@ class RewardsCfg:
     )
     base_height = RewardTermCfg(
         func=bmdp.base_height,
-        weight=-100.0,
+        weight=-20.0,
         params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.68}
     )
     orientation = RewardTermCfg(
@@ -295,7 +295,7 @@ class RewardsCfg:
     )
     torques = RewardTermCfg(
         func=bmdp.torques,
-        weight=-2.e-4 / 2.0,
+        weight=-2.e-4,
         params={"asset_cfg": SceneEntityCfg("robot")}
     )
     # torque_tiredness = RewardTermCfg(
@@ -329,7 +329,7 @@ class RewardsCfg:
     )
     dof_vel = RewardTermCfg(
         func=bmdp.dof_vel,
-        weight=-0.2 / 50.0,
+        weight=-1.e-4,
         params={"asset_cfg": SceneEntityCfg("robot")}
     )
     dof_acc = RewardTermCfg(
@@ -344,7 +344,7 @@ class RewardsCfg:
     )
     action_rate = RewardTermCfg(
         func=bmdp.action_rate,
-        weight=-1.0 / 10.0,
+        weight=-1.0,
         params={}
     )
     dof_pos_limits = RewardTermCfg(
@@ -367,19 +367,13 @@ class RewardsCfg:
     )
     feet_slip = RewardTermCfg(
         func=bmdp.feet_slip,
-        weight=-1.0,
+        weight=-0.1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
             "threshold": 0.1 
         }
     )
-    # symmetry rewards
-    # jointReg_pb = RewardTermCfg(
-    #     func=hmdp.jointReg_pb,
-    #     weight=0.5,
-    #     params={},
-    # )
     feet_yaw_diff = RewardTermCfg(
         func=bmdp.feet_yaw_diff,
         weight=-1.0,
@@ -392,7 +386,7 @@ class RewardsCfg:
     )
     feet_distance = RewardTermCfg(
         func=bmdp.feet_distance,
-        weight=-0.4,
+        weight=-1.0,
         params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"), "feet_distance_ref": 0.2}
     )
 

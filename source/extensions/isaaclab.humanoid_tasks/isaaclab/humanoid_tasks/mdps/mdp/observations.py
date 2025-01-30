@@ -22,7 +22,7 @@ def time_clock(env: ManagerBasedRLEnv, eps: float=1e-4) -> torch.Tensor:
     """access the time clock phase of the motion"""
     if not hasattr(env, 'phase_time'):
         env.phase_time = torch.zeros(env.num_envs, device=env.device)
-    phase = 2. * torch.pi * env.phase_time * env.cfg.phase_freq
+    phase = 2. * torch.pi * env.phase_time #  * env.cfg.phase_freq
     smooth_sqr_wave = torch.sin(phase) / \
             (2 * torch.sqrt(torch.sin(phase) ** 2. + eps ** 2.)) + 1. / 2.
     output = torch.stack(

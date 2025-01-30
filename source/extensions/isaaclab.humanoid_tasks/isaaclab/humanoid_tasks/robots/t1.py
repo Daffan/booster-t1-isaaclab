@@ -117,7 +117,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             enable_gyroscopic_forces=True,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            enabled_self_collisions=False,
+            enabled_self_collisions=True,
             solver_position_iteration_count=4,
             solver_velocity_iteration_count=1,
             sleep_threshold=0.005,
@@ -166,7 +166,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
                 "Right_Hip_Yaw",
                 "Right_Knee_Pitch",
             ],
-            stiffness=30,
+            stiffness=150,
             damping=5,
         ),
         "feet": IdealPDActuatorCfg(
@@ -176,8 +176,90 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
                 "Left_Ankle_Roll",
                 "Right_Ankle_Roll"
             ],
-            stiffness= 5,
-            damping= 1,
+            stiffness=25,
+            damping=1,
+        )
+    },
+)
+
+T1_LOCOMOTION_STIFF_CFG = ArticulationCfg(
+    prim_path="{ENV_REGEX_NS}/Robot",
+    spawn=sim_utils.UsdFileCfg(
+        usd_path=os.path.join(usd_path, "T1_locomotion.usd"),
+        # usd_path=os.path.join(usd_path, "T1_locomotion.usd"),
+        activate_contact_sensors=True,
+        rigid_props=sim_utils.RigidBodyPropertiesCfg(
+            disable_gravity=False,
+            retain_accelerations=False,
+            linear_damping=0.0,
+            angular_damping=0.0,
+            max_linear_velocity=1000.0,
+            max_angular_velocity=1000.0,
+            max_depenetration_velocity=100.0,
+            enable_gyroscopic_forces=True,
+        ),
+        articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+            enabled_self_collisions=True,
+            solver_position_iteration_count=4,
+            solver_velocity_iteration_count=1,
+            sleep_threshold=0.005,
+            stabilization_threshold=0.001,
+            fix_root_link=False
+        ),
+        copy_from_source=False,
+    ),
+    soft_joint_pos_limit_factor=0.95,
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 0.75),
+        joint_pos={
+            # 'Left_Hip_Pitch': -0.2,
+            # 'Left_Hip_Roll': 0.0,
+            # 'Left_Hip_Yaw': 0.0,
+            # 'Left_Knee_Pitch': 0.4,
+            # 'Left_Ankle_Pitch': -0.25,
+            # 'Left_Ankle_Roll': 0.0,
+            # 'Right_Hip_Pitch': -0.2,
+            # 'Right_Hip_Roll': 0.0,
+            # 'Right_Hip_Yaw': 0.0,
+            # 'Right_Knee_Pitch': 0.4,
+            # 'Right_Ankle_Pitch': -0.25,
+            # 'Right_Ankle_Roll': 0.0,
+            'Left_Hip_Pitch': -0.1,
+            'Left_Hip_Roll': 0.0,
+            'Left_Hip_Yaw': 0.0,
+            'Left_Knee_Pitch': 0.2,
+            'Left_Ankle_Pitch': -0.1,
+            'Right_Hip_Pitch': -0.1,
+            'Right_Hip_Roll': 0.0,
+            'Right_Hip_Yaw': 0.0,
+            'Right_Knee_Pitch': 0.2,
+            'Right_Ankle_Pitch': -0.1,
+        }
+    ),
+    actuators={
+        "legs": IdealPDActuatorCfg(
+            joint_names_expr=[
+                "Left_Hip_Pitch",
+                "Left_Hip_Roll",
+                "Left_Hip_Yaw",
+                "Left_Knee_Pitch",
+                "Right_Hip_Pitch",
+                "Right_Hip_Roll",
+                "Right_Hip_Yaw",
+                "Right_Knee_Pitch",
+            ],
+            stiffness=200,
+            damping=5,
+        ),
+        "feet": IdealPDActuatorCfg(
+            joint_names_expr=[
+                "Left_Ankle_Pitch",
+                "Right_Ankle_Pitch",
+                "Left_Ankle_Roll",
+                "Right_Ankle_Roll"
+            ],
+            stiffness=50,
+            damping=1,
         )
     },
 )

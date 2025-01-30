@@ -68,6 +68,18 @@ class T1BoosterWalkFlatPPORunnerCfg(T1PPORunnerCfg):
 
         self.algorithm.value_loss_coef = 2.0
 
+@configclass
+class T1WholeBodyWalkFlatPPORunnerCfg(T1PPORunnerCfg):
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.max_iterations = 20000
+        self.experiment_name = "t1_booster_wholebody_walking"
+        self.policy.actor_hidden_dims = [512, 256, 128]
+        self.policy.critic_hidden_dims = [512, 256, 128]
+
+        self.algorithm.value_loss_coef = 2.0
+
 
 @configclass
 class T1KickPPORunnerCfg(T1PPORunnerCfg):
@@ -76,5 +88,7 @@ class T1KickPPORunnerCfg(T1PPORunnerCfg):
 
         self.max_iterations = 20000
         self.experiment_name = "t1_kick"
-        self.policy.actor_hidden_dims = [256, 128, 128]
-        self.policy.critic_hidden_dims = [256, 128, 128]
+        self.policy.actor_hidden_dims = [512, 256, 128]
+        self.policy.critic_hidden_dims = [512, 256, 128]
+
+        self.algorithm.value_loss_coef = 2.0

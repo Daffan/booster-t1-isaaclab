@@ -6,7 +6,7 @@ from omni.isaac.lab.managers import SceneEntityCfg, ManagerTermBase, Observation
 from omni.isaac.lab.sensors import ContactSensor
 
 from isaaclab.humanoid_tasks.envs import HumanoidRLEnv
-from isaaclab.humanoid_tasks.booster_mdp.commands import UniformVelocityFreqCommand
+from isaaclab.humanoid_tasks.mdps.booster_mdp.commands import UniformVelocityFreqCommand
 
 def time_clock(env: HumanoidRLEnv, eps: float=1e-4) -> torch.Tensor:
     """access the time clock phase of the motion"""

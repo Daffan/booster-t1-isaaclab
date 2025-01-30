@@ -15,6 +15,8 @@ from isaaclab.humanoid_tasks.envs import HumanoidRLEnv
 
 @configclass
 class UniformVelocityFreqCommandCfg(UniformVelocityCommandCfg):
+    filter_weight: float = 0.1
+
     @configclass
     class Ranges(UniformVelocityCommandCfg.Ranges):
         """Uniform distribution ranges for the velocity commands."""

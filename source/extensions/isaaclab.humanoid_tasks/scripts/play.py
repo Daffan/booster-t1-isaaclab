@@ -23,6 +23,8 @@ parser.add_argument(
 )
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser.add_argument("--viz_joints", action="store_true", default=False, help="Visualize joint.")
+parser.add_argument("--viewer_scale", type=float, default=3.0, help="Viewer scale.")
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -68,7 +70,11 @@ def main():
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
     env_cfg.viewer.env_index = 0
-    env_cfg.viewer.eye=(12.5/3, 12.5/3, 7.5/3)
+    env_cfg.viewer.eye=(12.5/args_cli.viewer_scale, 12.5/args_cli.viewer_scale, 7.5/args_cli.viewer_scale)
+    env_cfg.commands.base_velocity.ranges.lin_vel_x = (1.5, 1.5)
+    env_cfg.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
+    env_cfg.commands.base_velocity.ranges.ang_vel_z = (1.0, 1.0)
+    env_cfg.commands.base_velocity.ranges.gait_frequency = (2.0, 2.0)
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
     # specify directory for logging experiments
@@ -142,15 +148,13 @@ def main():
             actions = policy(obs)
             
             # debug
-            actions = torch.zeros_like(actions)
-            joint_id = min(timestep // T, len(joint_names) - 1)
-            if timestep % T == 0:
-                print(f"Joint {joint_names[joint_id]}")
-            actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
+            if args_cli.viz_joints:
+                actions = torch.zeros_like(actions)
+                joint_id = min(timestep // T, len(joint_names) - 1)
+                if timestep % T == 0:
+                    print(f"Joint {joint_names[joint_id]}")
+                actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
             dof_targets.append(actions[0, :].detach().cpu().numpy())
-
-            # if play isaacgym policy
-            # actions = actions[:, [0, 5, 1, 6, 2, 7, 3, 8, 4, 9]]
 
             # env stepping
             obs, _, _, _ = env.step(actions)
@@ -166,12 +170,13 @@ def main():
 
     # plot dof pos
     import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(3, 4, figsize=(20, 12))
+    fig, axs = plt.subplots(5, 5, figsize=(20, 12))
     dof_targets = np.stack(dof_targets)
     # dof_pos = torch.stack(dof_pos, dim=1).detach().cpu().numpy().T
     dof_pos = np.stack(dof_pos_list)
-    for i in range(10):
-        ax = axs[i//4, i%4]
+    dim = min(25, action_dim)
+    for i in range(dim):
+        ax = axs[i//5, i%5]
         ax.plot(dof_targets[:, i], label='target')
         ax.plot(dof_pos[:, i], label='pos')
         # horizontal line for dof limits
@@ -186,63 +191,20 @@ def main():
     plt.savefig(os.path.join(test_result_dir, 'dof.png'))
     plt.close()
 
-    # fig, axs = plt.subplots(3, 4, figsize=(20, 12))
-    # for i in range(5):
-    #     ax = axs[i//4, i%4]
-    #     ax.plot(dof_targets[:, i*2], label='target')
-    #     ax.plot(dof_pos[:, i*2], label='pos')
-    #     # horizontal line for dof limits
-    #     ax.axhline(dof_limits[i*2][0], color='r', linestyle='--')
-    #     ax.axhline(dof_limits[i*2][1], color='r', linestyle='--')
+    # plot all the observations
+    fig, axs = plt.subplots(8, 8, figsize=(20, 20))
+    obss = np.stack(obss)
+    np.save(os.path.join(test_result_dir, 'obs.npy'), obss)
+    dim = min(64, obss.shape[1])
+    for i in range(dim):
+        ax = axs[i//8, i%8]
+        ax.plot(obss[:, i])
+        ax.set_title(f'Obs {i}')
 
-    #     ax.plot(dof_targets[:, i*2+1], label='target')
-    #     ax.plot(dof_pos[:, i*2+1], label='pos')
-
-    #     ax.set_title(f'DOF {i}')
-    #     ax.legend()
-
-    # plot contact
-    # contacts = np.stack(contacts)
-    # obss = np.stack(obss)
-    # ax1 = axs[2, 3]
-    # ax1.plot(contacts[:, 0], label='left')
-    # ax2 = axs[2, 2]
-    # ax2.plot(contacts[:, 1], label='right')
-    # ax2.set_title('Contact')
-
-    # ax3 = axs[2, 1]
-    # ax3.plot(obss[:, -2], label='sin')
-    # ax3.set_title('phase')
-
-    # ax4 = axs[2, 0]
-    # ax4.plot(obss[:, -1], label='cos')
-    # ax4.set_title('phase')
-
-    # # save the plot
-    # plt.tight_layout()
-    # plt.savefig(os.path.join(video_kwargs["video_folder"], 'dof_compare.png'))
-    # plt.close()
-
-    # # plot obs histories [38]
-
-    # # load reference obs data
-    # if os.path.exists(os.path.join(video_kwargs["video_folder"], "../../..", 'play_log.csv')):
-    #     reference_data = np.loadtxt(os.path.join(video_kwargs["video_folder"], "../../..", 'play_log.csv'), delimiter=",")
-    #     reference_obs = reference_data[:, 1:39]
-    # else:
-    #     reference_obs = None
-
-    # fig, axs = plt.subplots(6, 7, figsize=(20, 12))
-    # for i in range(38):
-    #     ax = axs[i//7, i%7]
-    #     ax.plot(obss[:, i])
-    #     if reference_obs is not None:
-    #         ax.plot(reference_obs[:, i], color='r')
-    #     ax.set_title(f'Obs {i}')
-    
-    # plt.tight_layout()
-    # plt.savefig(os.path.join(video_kwargs["video_folder"], 'obs.png'))
-    # plt.close()
+    # save the plot
+    plt.tight_layout()
+    plt.savefig(os.path.join(test_result_dir, 'obs.png'))
+    plt.close()
 
     # close the simulator
     env.close()

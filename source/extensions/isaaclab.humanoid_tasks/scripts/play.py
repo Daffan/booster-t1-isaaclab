@@ -25,6 +25,12 @@ parser.add_argument("--num_envs", type=int, default=1, help="Number of environme
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--viz_joints", action="store_true", default=False, help="Visualize joint.")
 parser.add_argument("--viewer_scale", type=float, default=3.0, help="Viewer scale.")
+
+parser.add_argument("--vel_x", type=float, default=1.0, help="X linear velocity.")
+parser.add_argument("--vel_y", type=float, default=0.0, help="Y linear velocity.")
+parser.add_argument("--vel_ang", type=float, default=1.0, help="Angular velocity.")
+parser.add_argument("--gait_freq", type=float, default=1.5, help="Frequency.")
+
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -59,6 +65,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     export_policy_as_onnx,
 )
 from omni.isaac.lab.assets import Articulation, RigidObject
+from omni.isaac.lab.envs.mdp.commands import UniformVelocityCommandCfg
 
 import isaaclab.humanoid_tasks.tasks
 
@@ -71,10 +78,12 @@ def main():
     )
     env_cfg.viewer.env_index = 0
     env_cfg.viewer.eye=(12.5/args_cli.viewer_scale, 12.5/args_cli.viewer_scale, 7.5/args_cli.viewer_scale)
-    env_cfg.commands.base_velocity.ranges.lin_vel_x = (1.5, 1.5)
-    env_cfg.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-    env_cfg.commands.base_velocity.ranges.ang_vel_z = (1.0, 1.0)
-    env_cfg.commands.base_velocity.ranges.gait_frequency = (2.0, 2.0)
+
+    if hasattr(env_cfg.commands, "base_velocity"):
+        env_cfg.commands.base_velocity.ranges.lin_vel_x = (args_cli.vel_x, args_cli.vel_x)
+        env_cfg.commands.base_velocity.ranges.lin_vel_y = (args_cli.vel_y, args_cli.vel_y)
+        env_cfg.commands.base_velocity.ranges.ang_vel_z = (args_cli.vel_ang, args_cli.vel_ang)
+        env_cfg.commands.base_velocity.ranges.gait_frequency = (args_cli.gait_freq, args_cli.gait_freq)
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
     # specify directory for logging experiments

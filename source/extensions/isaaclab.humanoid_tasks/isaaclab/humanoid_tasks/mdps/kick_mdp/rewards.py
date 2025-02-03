@@ -183,4 +183,15 @@ def ball_target(
         delta_distance = torch.zeros_like(torch.norm(rel_pos_w, dim=-1))
     env.last_step_values["rel_ball_target_pos"] = rel_pos_w
 
-    return -delta_distance
+    # change of ball position is not discouraged
+    return torch.clamp(-delta_distance, min=0)
+
+def ball_velocity(
+        env: HumanoidRLEnv,
+        robot_asset_cfg: SceneEntityCfg,
+        ball_asset_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    b_asset: RigidObject = env.scene[ball_asset_cfg.name]
+    ball_root_vel = b_asset.data.root_lin_vel_b
+    ball_root_vel_norm = torch.norm(ball_root_vel[:, :2], dim=-1)
+    return ball_root_vel_norm

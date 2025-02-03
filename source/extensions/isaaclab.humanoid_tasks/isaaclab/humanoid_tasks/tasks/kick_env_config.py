@@ -506,15 +506,16 @@ class RewardsCfg:
             "ball_asset_cfg": SceneEntityCfg("ball"),
         },
     )
-    approach_ball_yaw = RewardTermCfg(
-        func=kmdp.approach_ball_yaw,
-        weight=5.0,
-        params={
-            "robot_asset_cfg": SceneEntityCfg("robot"),
-            "ball_asset_cfg": SceneEntityCfg("ball"),
-            "std": 0.5,
-        },
-    )
+    # # This makes the performance worse
+    # approach_ball_yaw = RewardTermCfg(
+    #     func=kmdp.approach_ball_yaw,
+    #     weight=5.0,
+    #     params={
+    #         "robot_asset_cfg": SceneEntityCfg("robot"),
+    #         "ball_asset_cfg": SceneEntityCfg("ball"),
+    #         "std": 0.5,
+    #     },
+    # )
     standstill = RewardTermCfg(
         func=kmdp.standstill,
         weight=4.0,
@@ -533,47 +534,55 @@ class RewardsCfg:
             "goal_asset_cfg": SceneEntityCfg("goal"),
         },
     )
-    # regularization reward
-    action_smoothness = RewardTermCfg(
-        func=hmdp.action_rate1_reward,
-        weight=-1.0e-6
-    )
-    action_smoothness2 = RewardTermCfg(
-        func=hmdp.action_rate2_reward,
-        weight=-1.0e-5
-    )
-    joint_torques = RewardTermCfg(
-        func=hmdp.joint_torques,
-        weight=-1.0e-5,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
-    )  # penaltize large torques for all joints
-    joint_pos_limits = RewardTermCfg(
-        func=hmdp.joint_position_limit_penalty,
-        weight=-10.0,
+    ball_vel = RewardTermCfg(
+        func=kmdp.ball_velocity,
+        weight=5.0,
         params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=".*")
+            "robot_asset_cfg": SceneEntityCfg("robot"),
+            "ball_asset_cfg": SceneEntityCfg("ball"),
         },
-    )  # penalize joint limits
-    joint_vel_penalty = RewardTermCfg(
-        func=hmdp.joint_velocity_penalty,
-        weight=-1.0e-1,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
     )
-    joint_accel_penalty = RewardTermCfg(
-        func=hmdp.joint_acceleration_penalty,
-        weight=-1.0e-3,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
-    )
-    orientation_penalty = RewardTermCfg(
-        func=hmdp.base_orientation_penalty,
-        weight=-3.0,
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
-    base_height = RewardTermCfg(
-        func=hmdp.base_height_reward,
-        weight=2.0,
-        params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.70, "std": 0.25},
-    )
+    # # regularization reward
+    # action_smoothness = RewardTermCfg(
+    #     func=hmdp.action_rate1_reward,
+    #     weight=-1.0e-6
+    # )
+    # action_smoothness2 = RewardTermCfg(
+    #     func=hmdp.action_rate2_reward,
+    #     weight=-1.0e-5
+    # )
+    # joint_torques = RewardTermCfg(
+    #     func=hmdp.joint_torques,
+    #     weight=-1.0e-5,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    # )  # penaltize large torques for all joints
+    # joint_pos_limits = RewardTermCfg(
+    #     func=hmdp.joint_position_limit_penalty,
+    #     weight=-10.0,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=".*")
+    #     },
+    # )  # penalize joint limits
+    # joint_vel_penalty = RewardTermCfg(
+    #     func=hmdp.joint_velocity_penalty,
+    #     weight=-1.0e-1,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    # )
+    # joint_accel_penalty = RewardTermCfg(
+    #     func=hmdp.joint_acceleration_penalty,
+    #     weight=-1.0e-3,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    # )
+    # orientation_penalty = RewardTermCfg(
+    #     func=hmdp.base_orientation_penalty,
+    #     weight=-3.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )
+    # base_height = RewardTermCfg(
+    #     func=hmdp.base_height_reward,
+    #     weight=2.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.70, "std": 0.25},
+    # )
 
 
 @configclass

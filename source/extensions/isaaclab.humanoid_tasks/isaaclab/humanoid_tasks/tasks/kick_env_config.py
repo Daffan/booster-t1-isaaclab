@@ -644,3 +644,10 @@ class WholeBodyKick(HumanoidRLEnvCfg):
 class LowerBodyKick(WholeBodyKick):
     scene: LowerBodyCfg = LowerBodyCfg(num_envs=4096, env_spacing=2.5)
     rewards: WalkRewardCfg = WalkRewardCfg()
+
+
+
+@configclass
+class LowerBodyRunKick(WholeBodyKick):
+    scene: LowerBodyCfg = LowerBodyCfg(num_envs=4096, env_spacing=2.5)
+    rewards: RewardsCfg = RewardsCfg() # First test: just use the original reward

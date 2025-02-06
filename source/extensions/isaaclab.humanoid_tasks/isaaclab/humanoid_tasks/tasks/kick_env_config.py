@@ -520,7 +520,7 @@ class RewardsCfg:
         func=kmdp.standstill,
         weight=4.0,
         params={
-            "robot_asset_cfg": SceneEntityCfg("robot"),
+            "asset_cfg": SceneEntityCfg("robot"),
             "ball_asset_cfg": SceneEntityCfg("ball"),
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
         },

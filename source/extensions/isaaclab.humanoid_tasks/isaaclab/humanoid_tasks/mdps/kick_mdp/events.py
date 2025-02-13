@@ -46,12 +46,14 @@ def reset_ball_goal_pos(
 
     # poses
     ball_range_list = [ball_pose_range.get(key, (0.0, 0.0)) for key in ["radius"]]
+    ball_angle_list = [ball_pose_range.get(key, (0.0, 2 * torch.pi)) for key in ["angle"]]
     ball_ranges = torch.tensor(ball_range_list, device=ball_asset.device)
+    ball_angles = torch.tensor(ball_angle_list, device=ball_asset.device)
     goal_range_list = [goal_pose_range.get(key, (0.0, 0.0)) for key in ["x", "y"]]
     goal_ranges = torch.tensor(goal_range_list, device=ball_asset.device)
     
     ball_radius_rand_samples = math_utils.sample_uniform(ball_ranges[:, 0], ball_ranges[:, 1], (len(env_ids), 1), device=ball_asset.device)
-    ball_angle_rand_samples = math_utils.sample_uniform(0, 2 * torch.pi, (len(env_ids), 1), device=ball_asset.device)
+    ball_angle_rand_samples = math_utils.sample_uniform(ball_angles[:, 0], ball_angles[:, 1], (len(env_ids), 1), device=ball_asset.device)
     ball_rand_samples = torch.cat([ball_radius_rand_samples * torch.cos(ball_angle_rand_samples), ball_radius_rand_samples * torch.sin(ball_angle_rand_samples)], dim=-1)
     goal_rand_samples = math_utils.sample_uniform(goal_ranges[:, 0], goal_ranges[:, 1], (len(env_ids), 2), device=goal_asset.device)
     goal_rand_samples += ball_rand_samples  # make sure the goal is always in front of the ball

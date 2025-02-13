@@ -308,6 +308,47 @@ class EventCfg:
         },
     )
 
+class KickEventCfg(EventCfg):
+    reset_base = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot"),
+            "pose_range": {
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "yaw": (-3.14, 3.14),
+                "roll": (-0.3, 0.3),
+                "pitch": (-0.3, 0.3)
+            },
+            "velocity_range": {
+                "x": (-.5, .5),
+                "y": (-0.3, 0.3),
+                "z": (-0.2, 0.2),
+                "roll": (-0.3, 0.3),
+                "pitch": (-0.3, 0.3),
+                "yaw": (-0.5, 0.5),
+            },
+        },
+    )
+    reset_ball_goal = EventTerm(
+        func=kmdp.reset_ball_goal_pos,
+        mode="reset",
+        params={
+            "ball_asset_cfg": SceneEntityCfg("ball"),
+            "goal_asset_cfg": SceneEntityCfg("goal"),
+            "ball_pose_range": {
+                "radius": (3.0, 5.0),
+                "angle": (0.0, 0.0),
+            },
+            "goal_pose_range": {
+                "x": (6.0, 9.0),
+                "y": (-1.5, 1.5),
+            },
+            "minimum_distance": 0.3,
+        },
+    )
+
 @configclass
 class TerminationsCfg:
     """Termination terms for the MDP."""
@@ -651,3 +692,4 @@ class LowerBodyKick(WholeBodyKick):
 class LowerBodyRunKick(WholeBodyKick):
     scene: LowerBodyCfg = LowerBodyCfg(num_envs=4096, env_spacing=2.5)
     rewards: RewardsCfg = RewardsCfg() # First test: just use the original reward
+    events: KickEventCfg = KickEventCfg()

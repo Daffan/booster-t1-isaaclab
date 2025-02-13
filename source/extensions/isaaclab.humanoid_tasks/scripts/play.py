@@ -24,7 +24,7 @@ parser.add_argument(
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--viz_joints", action="store_true", default=False, help="Visualize joint.")
-parser.add_argument("--viewer_scale", type=float, default=3.0, help="Viewer scale.")
+parser.add_argument("--viewer_scale", type=float, default=1.0, help="Viewer scale.")
 
 parser.add_argument("--vel_x", type=float, default=1.0, help="X linear velocity.")
 parser.add_argument("--vel_y", type=float, default=0.0, help="Y linear velocity.")

@@ -308,6 +308,7 @@ class EventCfg:
         },
     )
 
+@configclass
 class KickEventCfg(EventCfg):
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
@@ -315,7 +316,7 @@ class KickEventCfg(EventCfg):
         params={
             "asset_cfg": SceneEntityCfg("robot"),
             "pose_range": {
-                "x": (-0.5, 0.5),
+                "x": (-3.5, -2.5),
                 "y": (-0.5, 0.5),
                 "yaw": (-3.14, 3.14),
                 "roll": (-0.3, 0.3),
@@ -338,11 +339,11 @@ class KickEventCfg(EventCfg):
             "ball_asset_cfg": SceneEntityCfg("ball"),
             "goal_asset_cfg": SceneEntityCfg("goal"),
             "ball_pose_range": {
-                "radius": (3.0, 5.0),
+                "radius": (0.0, 2.0),
                 "angle": (0.0, 0.0),
             },
             "goal_pose_range": {
-                "x": (6.0, 9.0),
+                "x": (1.0, 4.0),
                 "y": (-1.5, 1.5),
             },
             "minimum_distance": 0.3,

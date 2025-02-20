@@ -6,7 +6,8 @@ This IsaacLab extension implements a collections of Robocup Humanoid League task
 - [ ] Head Positioning
 
 ## Installation
-This extension depends on NVIDIA's IsaacSim and IsaacLab. Installation instructions can be found [here](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html). To install IsaacSim, the third step from this [instruction](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#installation-using-pip) is actually needed to avoid the error.
+This extension depends on NVIDIA's IsaacSim (v4.2.0) and IsaacLab (v1.3.0). Installation instructions can be found [here](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html). To install IsaacSim, the third step from this [instruction](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#installation-using-pip) is actually needed to avoid the error. 
+**Note that this repo is not compatible with newer version of IsaacLab (>= v2.0).**
 
 After installing the IsaacLab, install this extension using the following command:
 ```

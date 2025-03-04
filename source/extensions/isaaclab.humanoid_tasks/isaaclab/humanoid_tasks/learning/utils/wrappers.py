@@ -4,14 +4,6 @@ import copy
 import torch
 import os
 
-from omni.isaac.lab.utils import configclass
-
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
-    RslRlOnPolicyRunnerCfg,
-    RslRlPpoActorCriticCfg,
-    RslRlPpoAlgorithmCfg,
-)
-
 def export_policy_as_onnx(actor_critic: object, path: str, filename="policy.onnx", verbose=False) -> None:
     """Export policy into a Torch ONNX file.
 

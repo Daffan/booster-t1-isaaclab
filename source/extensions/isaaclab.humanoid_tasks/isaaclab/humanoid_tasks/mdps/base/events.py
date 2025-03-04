@@ -1,6 +1,6 @@
 """This sub-module contains the functions that can be used to enable Booster T1 randomizations.
 
-The functions can be passed to the :class:`omni.isaac.lab.managers.EventTermCfg` object to enable
+The functions can be passed to the :class:`isaaclab.managers.EventTermCfg` object to enable
 the randomization introduced by the function.
 """
 
@@ -9,16 +9,16 @@ from __future__ import annotations
 import torch
 from typing import TYPE_CHECKING
 
-from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import sample_uniform
+from isaaclab.assets import Articulation
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils.math import sample_uniform
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedEnv, ManagerBasedRLEnv
+    from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
 
 
 def reset_joints_around_default(
-    env: ManagerBasedEnv,
+    env: HumanoidRLEnv,
     env_ids: torch.Tensor,
     position_range: tuple[float, float],
     velocity_range: tuple[float, float],

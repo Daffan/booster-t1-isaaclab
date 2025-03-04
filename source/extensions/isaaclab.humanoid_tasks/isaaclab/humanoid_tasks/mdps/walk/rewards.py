@@ -1,17 +1,21 @@
+"""
+These reward functions are reimpelemented from https://github.com/BoosterRobotics/booster_gym
+"""
+
 from __future__ import annotations
 
 import torch
 from typing import TYPE_CHECKING
 
-from omni.isaac.lab.assets import Articulation, RigidObject
-from omni.isaac.lab.managers import ManagerTermBase, SceneEntityCfg
-from omni.isaac.lab.sensors import ContactSensor
-from omni.isaac.lab.utils.math import wrap_to_pi, euler_xyz_from_quat
+from isaaclab.assets import Articulation, RigidObject
+from isaaclab.managers import ManagerTermBase, SceneEntityCfg
+from isaaclab.sensors import ContactSensor
+from isaaclab.utils.math import wrap_to_pi, euler_xyz_from_quat
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.managers import RewardTermCfg
+    from isaaclab.managers import RewardTermCfg
     from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
-    from isaaclab.humanoid_tasks.mdps.booster_mdp.commands import UniformVelocityFreqCommand
+    from isaaclab.humanoid_tasks.mdps.walk.commands import UniformVelocityFreqCommand
 
 def tracking_lin_vel_x(
     env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float

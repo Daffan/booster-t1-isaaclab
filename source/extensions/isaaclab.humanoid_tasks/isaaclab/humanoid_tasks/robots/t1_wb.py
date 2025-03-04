@@ -17,10 +17,10 @@ file_dir = os.path.dirname(file_path)
 usd_relative_path = '../assets/usd'
 usd_path = os.path.abspath(os.path.join(file_dir, usd_relative_path))
 
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.actuators import ImplicitActuatorCfg, IdealPDActuatorCfg
-from omni.isaac.lab.assets import ArticulationCfg
-from omni.isaac.lab.actuators import DelayedPDActuatorCfg, RemotizedPDActuatorCfg
+import isaaclab.sim as sim_utils
+from isaaclab.actuators import ImplicitActuatorCfg, IdealPDActuatorCfg
+from isaaclab.assets import ArticulationCfg
+from isaaclab.actuators import DelayedPDActuatorCfg, RemotizedPDActuatorCfg
 
 ##
 # Configuration

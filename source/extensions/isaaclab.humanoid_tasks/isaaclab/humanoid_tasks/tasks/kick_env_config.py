@@ -3,33 +3,33 @@ import torch
 from dataclasses import MISSING
 from typing import TYPE_CHECKING
 
-import omni.isaac.lab.sim as sim_utils
-import omni.isaac.lab.terrains as terrain_gen
-from omni.isaac.lab.envs import ViewerCfg
-from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg, RigidObject, RigidObjectCfg
-from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
-from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
-from omni.isaac.lab.managers import EventTermCfg as EventTerm
-from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
-from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
-from omni.isaac.lab.managers import RewardTermCfg
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
-from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sensors import ContactSensorCfg, RayCasterCfg, patterns
-from omni.isaac.lab.terrains import TerrainImporterCfg
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
-from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from omni.isaac.lab.assets import RigidObject
-from omni.isaac.lab.envs import ManagerBasedRLEnv
+import isaaclab.sim as sim_utils
+import isaaclab.terrains as terrain_gen
+from isaaclab.envs import ViewerCfg
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import ObservationGroupCfg as ObsGroup
+from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import TerminationTermCfg as DoneTerm
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
+from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from isaaclab.assets import RigidObject
+from isaaclab.envs import ManagerBasedRLEnv
 
-import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
+import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 
 from isaaclab.humanoid_tasks.robots.t1 import T1_FIXED_ARMS_CFG, T1_LOCOMOTION_CFG  # isort: skip
 from isaaclab.humanoid_tasks.robots.t1_wb import T1_CFG  # isort: skip
 from isaaclab.humanoid_tasks.robots.ball import BALL_CFG  # isort: skip
-import isaaclab.humanoid_tasks.mdps.mdp as hmdp
+import isaaclab.humanoid_tasks.mdps.base as hmdp
 import isaaclab.humanoid_tasks.mdps.kick_mdp as kmdp
 import isaaclab.humanoid_tasks.mdps.booster_mdp as bmdp
 from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg

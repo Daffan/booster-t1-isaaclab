@@ -6,7 +6,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
-from rsl_rl.modules.actor_critic import ActorCritic, get_activation
+from rsl_rl.modules.actor_critic import ActorCritic
 from rsl_rl.utils import unpad_trajectories
 
 
@@ -95,3 +95,23 @@ class Memory(torch.nn.Module):
         # When the RNN is an LSTM, self.hidden_states_a is a list with hidden_state and cell_state
         for hidden_state in self.hidden_states:
             hidden_state[..., dones, :] = 0.0
+
+
+def get_activation(act_name):
+    if act_name == "elu":
+        return nn.ELU()
+    elif act_name == "selu":
+        return nn.SELU()
+    elif act_name == "relu":
+        return nn.ReLU()
+    elif act_name == "crelu":
+        return nn.CReLU()
+    elif act_name == "lrelu":
+        return nn.LeakyReLU()
+    elif act_name == "tanh":
+        return nn.Tanh()
+    elif act_name == "sigmoid":
+        return nn.Sigmoid()
+    else:
+        print("invalid activation function!")
+        return None

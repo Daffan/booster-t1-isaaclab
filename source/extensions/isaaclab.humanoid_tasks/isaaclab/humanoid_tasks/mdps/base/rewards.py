@@ -3,14 +3,13 @@ from __future__ import annotations
 import torch
 from typing import TYPE_CHECKING
 
-from omni.isaac.lab.assets import Articulation, RigidObject
-from omni.isaac.lab.managers import ManagerTermBase, SceneEntityCfg
-from omni.isaac.lab.sensors import ContactSensor
+from isaaclab.assets import Articulation, RigidObject
+from isaaclab.managers import ManagerTermBase, SceneEntityCfg
+from isaaclab.sensors import ContactSensor
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.managers import RewardTermCfg
-
-from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
+    from isaaclab.managers import RewardTermCfg
+    from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
 
 
 ###############  Task Reward Terms (old)  ###############
@@ -39,7 +38,7 @@ def base_linear_velocity_reward(
     return torch.sum(torch.exp(-lin_vel_error / std), dim=1) * velocity_scaling_multiple
 
 
-###############  Task Reward Terms  ###############
+###############  Task Reward Terms (new) ###############
 
 def tracking_lin_vel_reward(
     env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float
@@ -220,12 +219,6 @@ def air_time_variance_penalty(env: HumanoidRLEnv, sensor_cfg: SceneEntityCfg) ->
         torch.clip(last_contact_time, max=0.5), dim=1
     )
 
-def joint_regularization_exp(env: HumanoidRLEnv) -> torch.Tensor:
-    """Penalize joint symmetry"""
-    # regularize joint positions around default
-    current_error = env._joint_regularization()
-    return current_error
-
 def joint_regularization(env: HumanoidRLEnv) -> torch.Tensor:
     """Penalize joint symmetry. The joint indices are hard-coded for the T1 humanoid robot."""
     # extract the used quantities (to enable type-hinting)
@@ -245,16 +238,3 @@ def joint_regularization(env: HumanoidRLEnv) -> torch.Tensor:
     error += torch.square(
         (asset.data.joint_pos[:, 0] - default_joint_pos[:, 0] + asset.data.joint_pos[:, 1] - default_joint_pos[:, 1]))
     return error
-
-###############  Gait Specification Reward (Part1)  ###############
-
-def jointReg_pb(env: HumanoidRLEnv) -> torch.Tensor:
-    """Penalize joint symmetry"""
-    current_error = env._joint_regularization()
-
-    if hasattr(env, "rwd_jointRegPrev"):
-        delta_phi = ~env.reset_buf \
-            * (current_error - env.rwd_jointRegPrev)
-    else:
-        delta_phi = torch.zeros_like(current_error)
-    return delta_phi / env.step_dt

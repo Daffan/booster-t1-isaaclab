@@ -6,13 +6,13 @@ from collections import OrderedDict as odict
 from copy import deepcopy
 
 from numpy import indices
-from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.sensors import ContactSensor
-from omni.isaac.lab.utils import resolve_matching_names_values
+from isaaclab.assets import Articulation
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.sensors import ContactSensor
+from isaaclab.utils import resolve_matching_names_values
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedRLEnv
+    from isaaclab.envs import ManagerBasedRLEnv
 
 import matplotlib.pyplot as plt
 

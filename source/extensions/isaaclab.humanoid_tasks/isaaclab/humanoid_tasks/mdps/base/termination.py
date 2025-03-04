@@ -1,8 +1,9 @@
 import torch
+from typing import TYPE_CHECKING
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.assets import RigidObject
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.assets import RigidObject
 
 def humanoid_fall(env: ManagerBasedRLEnv,
                   asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),

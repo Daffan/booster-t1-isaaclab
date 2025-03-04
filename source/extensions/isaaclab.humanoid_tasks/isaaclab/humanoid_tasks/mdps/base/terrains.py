@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import omni.isaac.lab.terrains as terrain_gen
+import isaaclab.terrains as terrain_gen
 
 REALLY_HARD_CFG = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0), #subterrain size

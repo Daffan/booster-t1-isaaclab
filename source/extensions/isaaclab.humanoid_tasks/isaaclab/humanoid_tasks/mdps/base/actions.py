@@ -1,10 +1,10 @@
 from dataclasses import MISSING
 
-from omni.isaac.lab.controllers import DifferentialIKControllerCfg
-from omni.isaac.lab.managers.action_manager import ActionTerm, ActionTermCfg
-from omni.isaac.lab.utils import configclass
+from isaaclab.controllers import DifferentialIKControllerCfg
+from isaaclab.managers.action_manager import ActionTerm, ActionTermCfg
+from isaaclab.utils import configclass
 
-import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
+import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 
 @configclass
 class ClippedJointPositionActionCfg(mdp.JointPositionActionCfg):
@@ -23,7 +23,7 @@ class ClippedJointPositionActionCfg(mdp.JointPositionActionCfg):
     from the articulation asset.
     """
 
-    clip: float = 1.0
+    action_clip: float = 1.0
 
 
 class ClippedJointPositionAction(mdp.JointPositionAction):
@@ -36,6 +36,6 @@ class ClippedJointPositionAction(mdp.JointPositionAction):
         # apply the processed actions
         # print("actions", self._processed_actions, self._processed_actions.clamp(-self.cfg.clip, self.cfg.clip))
         self._asset.set_joint_position_target(
-            self._processed_actions.clamp(-self.cfg.clip, self.cfg.clip),
+            self._processed_actions.clamp(-self.cfg.action_clip, self.cfg.action_clip),
             joint_ids=self._joint_ids
         )

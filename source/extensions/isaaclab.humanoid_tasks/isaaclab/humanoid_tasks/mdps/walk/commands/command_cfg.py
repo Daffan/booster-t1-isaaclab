@@ -2,16 +2,12 @@ from collections.abc import Sequence
 from typing import Any
 from dataclasses import MISSING
 
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.envs.mdp import UniformVelocityCommandCfg
-# from omni.isaac.lab.envs.mdp import UniformPose2dCommand, UniformPose2dCommandCfg
-from omni.isaac.lab.markers import VisualizationMarkersCfg
-from omni.isaac.lab.markers.config import BLUE_ARROW_X_MARKER_CFG, FRAME_MARKER_CFG, GREEN_ARROW_X_MARKER_CFG
-import omni.isaac.lab.sim as sim_utils
-
-from isaaclab.humanoid_tasks.envs import HumanoidRLEnv
-
-# from .command_cfg import ReplayPose2dCommandCfg
+from isaaclab.utils import configclass
+from isaaclab.envs.mdp import UniformVelocityCommandCfg
+# from isaaclab.envs.mdp import UniformPose2dCommand, UniformPose2dCommandCfg
+from isaaclab.markers import VisualizationMarkersCfg
+from isaaclab.markers.config import BLUE_ARROW_X_MARKER_CFG, FRAME_MARKER_CFG, GREEN_ARROW_X_MARKER_CFG
+import isaaclab.sim as sim_utils
 
 @configclass
 class UniformVelocityFreqCommandCfg(UniformVelocityCommandCfg):

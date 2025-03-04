@@ -7,25 +7,21 @@ from isaaclab.utils import configclass
 from isaaclab.envs import ManagerBasedRLEnv, ManagerBasedRLEnvCfg
 
 @configclass
-class HumanoidRLEnvCfg(ManagerBasedRLEnvCfg):
+class SoccerRLEnvCfg(ManagerBasedRLEnvCfg):
     phase_freq: float = 1.0
     only_positive_rewards: bool = False
 
 
-class HumanoidRLEnv(ManagerBasedRLEnv):
-    """ Humanoid RL manager-based environment.
-    - Internal phase clock
-    - Only positive rewards
-    - Last 3 timestep action histories
+class SoccerRLEnv(ManagerBasedRLEnv):
+    """ Soccer RL manager-based environment.
     """
-    cfg: HumanoidRLEnvCfg
-    def __init__(self, cfg: HumanoidRLEnvCfg, render_mode: str | None = None, **kwargs):
-        super(HumanoidRLEnv, self).__init__(cfg, render_mode, **kwargs)
+    cfg: SoccerRLEnvCfg
+    def __init__(self, cfg: SoccerRLEnvCfg, render_mode: str | None = None, **kwargs):
+        super(SoccerRLEnv, self).__init__(cfg, render_mode, **kwargs)
         self.phase_time = torch.zeros(self.num_envs, device=self.device)
-        self.action_histories = deque(maxlen=3)
 
     def reset(self, seed: int | None = None, options = None):
-        output = super(HumanoidRLEnv, self).reset(seed, options)
+        output = super(SoccerRLEnv, self).reset(seed, options)
         self.phase_time = torch.rand(self.phase_time.shape, device=self.phase_time.device)
         return output
 
@@ -35,7 +31,6 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
 
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         super().step(action)
-        self.action_histories.append(action.clone())
         self.phase_time = torch.fmod(self.phase_time + self.step_dt / self.cfg.phase_freq, 1.0)
         if self.cfg.only_positive_rewards:
             self.reward_buf = torch.clamp(self.reward_buf, min=0.0)

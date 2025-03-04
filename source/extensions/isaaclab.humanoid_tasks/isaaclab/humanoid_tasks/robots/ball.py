@@ -1,5 +1,5 @@
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg, RigidObject, RigidObjectCfg
+import isaaclab.sim as sim_utils
+from isaaclab.assets import RigidObjectCfg
 
 BALL_CFG = RigidObjectCfg(
         prim_path="/World/Ball",

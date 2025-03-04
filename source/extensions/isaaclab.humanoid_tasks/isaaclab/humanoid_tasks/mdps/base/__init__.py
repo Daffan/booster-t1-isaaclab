@@ -3,3 +3,4 @@ from .observations import *
 from .rewards import *
 from .termination import *
 from .terrains import *
+from .actions import *

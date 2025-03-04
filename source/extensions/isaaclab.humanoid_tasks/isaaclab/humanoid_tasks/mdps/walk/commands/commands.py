@@ -1,15 +1,8 @@
-from collections.abc import Sequence
-# import pandas as pd
 import numpy as np
 import torch
-from scipy.signal import savgol_filter
-from uuid import uuid4
-from tqdm import tqdm
-from easydict import EasyDict
-import yaml
 
 from .command_cfg import UniformVelocityFreqCommandCfg
-from omni.isaac.lab.envs.mdp import UniformVelocityCommand
+from isaaclab.envs.mdp import UniformVelocityCommand
 from isaaclab.humanoid_tasks.envs import HumanoidRLEnv
 
 class UniformVelocityFreqCommand(UniformVelocityCommand):

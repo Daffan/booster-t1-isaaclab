@@ -3,16 +3,15 @@ from __future__ import annotations
 import torch
 from typing import TYPE_CHECKING
 
-from omni.isaac.lab.assets import Articulation, RigidObject
-from omni.isaac.lab.managers import ManagerTermBase, SceneEntityCfg
-from omni.isaac.lab.sensors import ContactSensor
-from omni.isaac.lab.utils.math import quat_apply_yaw, euler_xyz_from_quat, wrap_to_pi
+from isaaclab.assets import Articulation, RigidObject
+from isaaclab.managers import ManagerTermBase, SceneEntityCfg
+from isaaclab.sensors import ContactSensor
+from isaaclab.utils.math import quat_apply_yaw, euler_xyz_from_quat, wrap_to_pi
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.managers import RewardTermCfg
-    from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
+    from isaaclab.humanoid_tasks.envs import SoccerRLEnv, SoccerRLEnvCfg
 
-def approach_ball_pos(env: HumanoidRLEnv, robot_asset_cfg: SceneEntityCfg, ball_asset_cfg: SceneEntityCfg, distance_threshold: float=0.25) -> torch.Tensor:
+def approach_ball_pos(env: SoccerRLEnv, robot_asset_cfg: SceneEntityCfg, ball_asset_cfg: SceneEntityCfg, distance_threshold: float=0.25) -> torch.Tensor:
     """Encourage the robot to walk toward the ball"""
     r_asset: Articulation = env.scene[robot_asset_cfg.name]
     b_asset: RigidObject = env.scene[ball_asset_cfg.name]
@@ -31,7 +30,7 @@ def approach_ball_pos(env: HumanoidRLEnv, robot_asset_cfg: SceneEntityCfg, ball_
     return -delta_distance * (ball_root_vel_norm < 0.01) * (torch.norm(rel_pos_w, dim=-1) > distance_threshold)
 
 def approach_ball_lin_vel(
-        env: HumanoidRLEnv,
+        env: SoccerRLEnv,
         robot_asset_cfg: SceneEntityCfg,
         ball_asset_cfg: SceneEntityCfg,
         vel_clip: float=2.0,
@@ -52,7 +51,7 @@ def approach_ball_lin_vel(
     return robot_vel_proj * (ball_root_vel_norm < 0.01) * (torch.norm(rel_pos_w, dim=-1) > distance_threshold)
 
 def approach_ball_lin_vel_exp(
-        env: HumanoidRLEnv,
+        env: SoccerRLEnv,
         robot_asset_cfg: SceneEntityCfg,
         ball_asset_cfg: SceneEntityCfg,
         std: float=0.25,
@@ -75,14 +74,14 @@ def approach_ball_lin_vel_exp(
     # only apply when the ball is static to avoid dribbling
     return torch.exp(-torch.square(vel_error).sum(dim=-1) / std) * (torch.norm(rel_pos_w, dim=-1) > distance_threshold) # * (ball_root_vel_norm < 0.01)
 
-def joint_position(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: SceneEntityCfg) -> torch.Tensor:
+def joint_position(env: SoccerRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: SceneEntityCfg) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     b_asset: RigidObject = env.scene[ball_asset_cfg.name]
     ball_root_vel = b_asset.data.root_lin_vel_w[:, :2]
     # only apply when the ball is moving
     return torch.linalg.norm((asset.data.joint_pos - asset.data.default_joint_pos), dim=1) ** 2 * (torch.norm(ball_root_vel, dim=-1) < 0.01)
 
-def standstill(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+def standstill(env: SoccerRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     b_asset: RigidObject = env.scene[ball_asset_cfg.name]
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
@@ -93,7 +92,7 @@ def standstill(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: Sc
     # encourage both feet making contact with the ground
     return is_contact.all(dim=-1) * (torch.norm(ball_root_vel, dim=-1) > 0.01)
 
-def feet_swing(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, swing_period: float=0.2) -> torch.Tensor:
+def feet_swing(env: SoccerRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, swing_period: float=0.2) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     b_asset: RigidObject = env.scene[ball_asset_cfg.name]
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
@@ -111,7 +110,7 @@ def feet_swing(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: Sc
     return (left_swing & ~is_contact[:, 0]).float() + (right_swing & ~is_contact[:, 1]).float()
 
 def approach_ball_yaw(
-        env: HumanoidRLEnv,
+        env: SoccerRLEnv,
         robot_asset_cfg: SceneEntityCfg,
         ball_asset_cfg: SceneEntityCfg,
         std: float = 0.5,
@@ -128,7 +127,7 @@ def approach_ball_yaw(
     return torch.exp(-torch.square(ball_yaw) / std) * (torch.norm(ball_pos_r[:, :2], dim=-1) > distance_threshold) * (ball_root_vel_norm < 0.01)
 
 def approach_ball_ang_vel(
-        env: HumanoidRLEnv,
+        env: SoccerRLEnv,
         robot_asset_cfg: SceneEntityCfg,
         ball_asset_cfg: SceneEntityCfg,
         std: float = 0.5,
@@ -164,7 +163,7 @@ def approach_ball_ang_vel(
     return torch.exp(-torch.square(yaw_speed_error) / std) * (torch.norm(ball_pos_w[:, :2], dim=-1) > distance_threshold) # * (ball_root_vel_norm < 0.01)
 
 def ball_target(
-        env: HumanoidRLEnv,
+        env: SoccerRLEnv,
         robot_asset_cfg: SceneEntityCfg,
         ball_asset_cfg: SceneEntityCfg,
         goal_asset_cfg: SceneEntityCfg,
@@ -187,7 +186,7 @@ def ball_target(
     return torch.clamp(-delta_distance, min=0)
 
 def ball_velocity(
-        env: HumanoidRLEnv,
+        env: SoccerRLEnv,
         robot_asset_cfg: SceneEntityCfg,
         ball_asset_cfg: SceneEntityCfg,
 ) -> torch.Tensor:

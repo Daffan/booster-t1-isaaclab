@@ -3,22 +3,16 @@ from __future__ import annotations
 import torch
 from typing import TYPE_CHECKING, Literal
 
-import carb
-import omni.physics.tensors.impl.api as physx
-
-import omni.isaac.lab.sim as sim_utils
-import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.actuators import ImplicitActuator
-from omni.isaac.lab.assets import Articulation, DeformableObject, RigidObject
-from omni.isaac.lab.managers import EventTermCfg, ManagerTermBase, SceneEntityCfg
-from omni.isaac.lab.terrains import TerrainImporter
+import isaaclab.utils.math as math_utils
+from isaaclab.assets import Articulation, DeformableObject, RigidObject
+from isaaclab.managers import EventTermCfg, ManagerTermBase, SceneEntityCfg
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedEnv
+    from isaaclab.humanoid_tasks.envs import SoccerRLEnv
 
 
 def reset_ball_goal_pos(
-    env: ManagerBasedEnv,
+    env: SoccerRLEnv,
     env_ids: torch.Tensor,
     ball_pose_range: dict[str, tuple[float, float]],
     goal_pose_range: dict[str, tuple[float, float]],

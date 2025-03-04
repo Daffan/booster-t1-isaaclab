@@ -1,8 +1,8 @@
 import torch
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.assets import RigidObject
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.assets import RigidObject
 
 def ball_reach_goal(env: ManagerBasedRLEnv,
                     ball_asset_cfg: SceneEntityCfg = SceneEntityCfg("ball"),

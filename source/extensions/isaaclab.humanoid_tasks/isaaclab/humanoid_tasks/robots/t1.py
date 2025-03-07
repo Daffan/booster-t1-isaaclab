@@ -62,28 +62,30 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.75),
         joint_pos={
-            # 'Left_Hip_Pitch': -0.2,
-            # 'Left_Hip_Roll': 0.0,
-            # 'Left_Hip_Yaw': 0.0,
-            # 'Left_Knee_Pitch': 0.4,
-            # 'Left_Ankle_Pitch': -0.25,
-            # 'Left_Ankle_Roll': 0.0,
-            # 'Right_Hip_Pitch': -0.2,
-            # 'Right_Hip_Roll': 0.0,
-            # 'Right_Hip_Yaw': 0.0,
-            # 'Right_Knee_Pitch': 0.4,
-            # 'Right_Ankle_Pitch': -0.25,
-            # 'Right_Ankle_Roll': 0.0,
-            'Left_Hip_Pitch': -0.1,
+            'Left_Hip_Pitch': -0.2,
             'Left_Hip_Roll': 0.0,
             'Left_Hip_Yaw': 0.0,
-            'Left_Knee_Pitch': 0.2,
-            'Left_Ankle_Pitch': -0.1,
-            'Right_Hip_Pitch': -0.1,
+            'Left_Knee_Pitch': 0.4,
+            'Left_Ankle_Pitch': -0.25,
+            'Left_Ankle_Roll': 0.0,
+            'Right_Hip_Pitch': -0.2,
             'Right_Hip_Roll': 0.0,
             'Right_Hip_Yaw': 0.0,
-            'Right_Knee_Pitch': 0.2,
-            'Right_Ankle_Pitch': -0.1,
+            'Right_Knee_Pitch': 0.4,
+            'Right_Ankle_Pitch': -0.25,
+            'Right_Ankle_Roll': 0.0,
+            # 'Left_Hip_Pitch': -0.1,
+            # 'Left_Hip_Roll': 0.0,
+            # 'Left_Hip_Yaw': 0.0,
+            # 'Left_Knee_Pitch': 0.2,
+            # 'Left_Ankle_Pitch': -0.1,
+            # 'Left_Ankle_Roll': 0.0,
+            # 'Right_Hip_Pitch': -0.1,
+            # 'Right_Hip_Roll': 0.0,
+            # 'Right_Hip_Yaw': 0.0,
+            # 'Right_Knee_Pitch': 0.2,
+            # 'Right_Ankle_Pitch': -0.1,
+            # 'Right_Ankle_Roll': 0.0,
         }
     ),
     actuators={
@@ -100,6 +102,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             ],
             stiffness=150,
             damping=5,
+            effort_limit=60
         ),
         "feet": IdealPDActuatorCfg(
             joint_names_expr=[
@@ -110,6 +113,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             ],
             stiffness=25,
             damping=1,
+            effort_limit=25
         )
     },
 )

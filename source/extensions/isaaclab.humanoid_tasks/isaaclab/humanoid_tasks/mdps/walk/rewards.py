@@ -70,6 +70,11 @@ def base_height(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, target_height=0.6
     # print("base_height", base_height[0].item())
     return torch.square(base_height - target_height)
 
+def base_z_velocity(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Reward for keeping the base z velocity."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return torch.square(asset.data.root_lin_vel_w[:, 2])
+
 def collision(env: HumanoidRLEnv, sensor_cfg: SceneEntityCfg, threshold=0.1) -> torch.Tensor:
     """Reward for avoiding collisions."""
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
@@ -178,7 +183,7 @@ def feet_yaw_mean(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor
     # print("feet_yaw_mean", (wrap_to_pi(base_yaw) - wrap_to_pi(feet_yaw.mean(dim=-1)))[0].item())
     return torch.square((wrap_to_pi(base_yaw) - wrap_to_pi(feet_yaw.mean(dim=-1))))
 
-def feet_distance(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, feet_distance_ref: float=0.2) -> torch.Tensor:
+def feet_distance(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, feet_distance_ref: float=0.22) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     feet_pos = asset.data.body_pos_w[:, asset_cfg.body_ids]
     *_, base_yaw = euler_xyz_from_quat(asset.data.root_quat_w)

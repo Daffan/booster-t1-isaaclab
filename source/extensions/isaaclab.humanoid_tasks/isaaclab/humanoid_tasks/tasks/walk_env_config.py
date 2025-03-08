@@ -337,23 +337,28 @@ class CurriculumCfg:
 
 @configclass
 class RewardsCfg:
+    survival = RewardTermCfg(
+        func=bmdp.survival_reward,
+        weight=2.0,
+    )
     base_angular_velocity = RewardTermCfg(
         func=bmdp.tracking_ang_vel_reward,
-        weight=3.0,
+        weight=4.0,
         params={"std": 0.5, "asset_cfg": SceneEntityCfg("robot")},
     )
     base_linear_velocity = RewardTermCfg(
         func=bmdp.tracking_lin_vel_reward,
-        weight=6.0,
+        weight=8.0,
         params={"std": 0.5, "asset_cfg": SceneEntityCfg("robot")},
     )
     feet_swing = RewardTermCfg(
-        func=wmdp.feet_swing,
+        func=wmdp.feet_swing_height,
         weight=2.0,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
             "swing_period": 0.2,
+            "target_height": 0.05
         }
     )
     action_smoothness = RewardTermCfg(
@@ -394,7 +399,7 @@ class RewardsCfg:
     base_height = RewardTermCfg(
         func=wmdp.base_height,
         weight=-40.0,
-        params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.65},
+        params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.67},
     )
     base_z_velocity = RewardTermCfg(
         func=wmdp.base_z_velocity,
@@ -416,7 +421,7 @@ class RewardsCfg:
     )
     # standstill = RewardTermCfg(
     #     func=wmdp.standstill,
-    #     weight=1.0,
+    #     weight=0.5,
     #     params={
     #         "asset_cfg": SceneEntityCfg("robot"),
     #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
@@ -438,15 +443,20 @@ class RewardsCfg:
             "threshold": 1.0,
         },
     )
-    # jointReg_pb = RewardTermCfg(
-    #     func=bmdp.joint_regularization,
-    #     weight=-10.0,
-    #     params={},
-    # )
+    jointReg_pb = RewardTermCfg(
+        func=bmdp.joint_regularization,
+        weight=-10.0,
+        params={},
+    )
     feet_distance = RewardTermCfg(
         func=wmdp.feet_distance,
         weight=-1.0,
         params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"), "feet_distance_ref": 0.20}
+    )
+    feet_roll = RewardTermCfg(
+        func=wmdp.feet_roll,
+        weight=-0.1,
+        params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link")}
     )
 
 @configclass

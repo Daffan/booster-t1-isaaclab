@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 
 ###############  Task Reward Terms (old)  ###############
 
+def survival_reward(env: HumanoidRLEnv) -> torch.Tensor:
+    return torch.ones(env.num_envs, device=env.device)
+
 def base_angular_velocity_reward(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, std: float) -> torch.Tensor:
     """Reward tracking of angular velocity commands (yaw) using abs exponential kernel."""
     # extract the used quantities (to enable type-hinting)

@@ -195,6 +195,13 @@ def feet_distance(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, feet_distance_r
     return torch.clip(feet_distance_ref - feet_distance, min=-0., max=0.1)
     # return torch.abs(feet_distance - feet_distance_ref)
 
+def feet_roll(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    asset: Articulation = env.scene[asset_cfg.name]
+    *_, feet_roll = euler_xyz_from_quat(asset.data.body_quat_w[:, asset_cfg.body_ids].reshape(-1, 4))
+    feet_roll = feet_roll.reshape(-1, len(asset_cfg.body_ids))
+    # print("feet_roll", feet_roll[0].item())
+    return torch.square(feet_roll).sum(dim=-1)
+
 def feet_swing(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, swing_period: float=0.2) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
@@ -210,7 +217,7 @@ def feet_swing(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneE
     right_swing = (torch.abs(gait_progress - 0.75) < 0.5 * swing_period) & (gait_frequency > 1.0e-8)
     return (left_swing & ~is_contact[:, 0]).float() + (right_swing & ~is_contact[:, 1]).float()
 
-def feet_swing_height(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, swing_period: float=0.2, target_height: float=0.1) -> torch.Tensor:
+def feet_swing_height(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, swing_period: float=0.2, target_height: float=0.08) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
     # get contact state

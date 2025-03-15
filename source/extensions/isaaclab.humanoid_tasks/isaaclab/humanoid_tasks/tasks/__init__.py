@@ -13,6 +13,16 @@ gym.register(
 )
 
 gym.register(
+    id="Booster-T1-lb-priv-walk-v0",
+    entry_point="isaaclab.humanoid_tasks.envs:HumanoidRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": walk_env_config.LowerPrivRLEnvCfg,
+        "rsl_rl_cfg_entry_point": ppo_config.T1WalkFlatPPORunnerCfg,
+    },
+)
+
+gym.register(
     id="Booster-T1-wb-walk-v0",
     entry_point="isaaclab.humanoid_tasks.envs:HumanoidRLEnv",
     disable_env_checker=True,

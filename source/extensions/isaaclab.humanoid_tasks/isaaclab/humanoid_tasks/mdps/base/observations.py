@@ -53,4 +53,4 @@ def joint_friction(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.T
     """access the ground truth friction of the joints
     """
     asset: Articulation = env.scene[asset_cfg.name]
-    return asset.data.joint_friction
+    return asset.data.joint_friction_coeff

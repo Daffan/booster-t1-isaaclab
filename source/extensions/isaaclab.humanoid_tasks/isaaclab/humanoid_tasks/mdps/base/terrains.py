@@ -141,3 +141,23 @@ PYRAMID_STAIRS_CFG = terrain_gen.TerrainGeneratorCfg(
         ),
     },
 )
+
+BOOSTER_CFG = terrain_gen.TerrainGeneratorCfg(
+    size=(8.0, 8.0), #subterrain size
+    border_width=5.0,
+    num_rows=10,
+    num_cols=20,
+    horizontal_scale=0.1,
+    vertical_scale=0.005,
+    slope_threshold=0.75,
+    difficulty_range=(0.0, 0.2),
+    use_cache=False,
+    sub_terrains={
+        "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
+            proportion=0.5, noise_range=(-0.03, 0.03), noise_step=0.005, downsampled_scale=0.2
+        ),
+        "discrete": terrain_gen.HfDiscreteObstaclesTerrainCfg(
+            obstacle_width_range=(1., 2.), obstacle_height_range=(0.01, 0.02), num_obstacles=20, platform_width=3.0
+        ),
+    },
+)

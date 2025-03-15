@@ -13,13 +13,14 @@ class UniformVelocityFreqCommand(UniformVelocityCommand):
         self.gait_frequency = torch.zeros(self.num_envs, device=self.device)
         self.gait_progress = torch.rand(self.num_envs, device=self.device)
 
-        self.filtered_lin_vel = torch.zeros_like(self.robot.data.root_lin_vel_w)
-        self.filtered_ang_vel = torch.zeros_like(self.robot.data.root_ang_vel_w)
+        self.filtered_lin_vel = torch.zeros_like(self.robot.data.root_lin_vel_b)
+        self.filtered_ang_vel = torch.zeros_like(self.robot.data.root_ang_vel_b)
 
     @property
     def command(self) -> torch.Tensor:
         """The desired base velocity command in the base frame. Shape is (num_envs, 3)."""
-        return torch.cat([self.vel_command_b, self.gait_frequency.unsqueeze(-1)], dim=-1)
+        # return torch.cat([self.vel_command_b, self.gait_frequency.unsqueeze(-1)], dim=-1)
+        return self.vel_command_b
     
     def _update_metrics(self):
         # time for which the command was executed
@@ -39,8 +40,8 @@ class UniformVelocityFreqCommand(UniformVelocityCommand):
         self.gait_frequency[env_ids] = r.uniform_(*self.cfg.ranges.gait_frequency)
         self.gait_progress[env_ids] = r.uniform_(0, 1)
 
-        self.filtered_ang_vel[env_ids] = self.robot.data.root_ang_vel_w[env_ids]
-        self.filtered_lin_vel[env_ids] = self.robot.data.root_lin_vel_w[env_ids]
+        # self.filtered_ang_vel[env_ids] = self.robot.data.root_ang_vel_w[env_ids]
+        # self.filtered_lin_vel[env_ids] = self.robot.data.root_lin_vel_w[env_ids]
 
     def set_command(self, lin_x: float, lin_y: float, yaw: float, gait_freq: float):
         self.vel_command_b = torch.tensor([lin_x, lin_y, yaw], device=self.device)
@@ -53,10 +54,11 @@ class UniformVelocityFreqCommand(UniformVelocityCommand):
         self.gait_frequency[standing_env_ids] = 0.0
 
         # filter the linear and angular velocity
-        self.filtered_lin_vel = self.cfg.filter_weight * self.robot.data.root_lin_vel_w + \
+        self.filtered_lin_vel = self.cfg.filter_weight * self.robot.data.root_lin_vel_b + \
                                 (1 - self.cfg.filter_weight) * self.filtered_lin_vel
-        self.filtered_ang_vel = self.cfg.filter_weight * self.robot.data.root_ang_vel_w + \
+        self.filtered_ang_vel = self.cfg.filter_weight * self.robot.data.root_ang_vel_b + \
                                 (1 - self.cfg.filter_weight) * self.filtered_ang_vel
+        # print("filtered_lin_vel", self.filtered_lin_vel, "true lin vel", self.robot.data.root_lin_vel_b, self.cfg.filter_weight)
 
         self.gait_progress = torch.fmod(self.gait_progress + self.gait_frequency * self._env.step_dt, 1.0)
         
@@ -66,6 +68,6 @@ class UniformVelocityFreqCommand(UniformVelocityCommand):
     def reset(self, env_ids = None):
         if env_ids is None:
             env_ids = torch.arange(self.num_envs, device=self.device)
-        self.filtered_lin_vel[env_ids] = torch.zeros_like(self.robot.data.root_lin_vel_w[env_ids])
-        self.filtered_ang_vel[env_ids] = torch.zeros_like(self.robot.data.root_ang_vel_w[env_ids])
+        self.filtered_lin_vel[env_ids] = torch.zeros_like(self.robot.data.root_lin_vel_b[env_ids])
+        self.filtered_ang_vel[env_ids] = torch.zeros_like(self.robot.data.root_ang_vel_b[env_ids])
         return super().reset(env_ids)

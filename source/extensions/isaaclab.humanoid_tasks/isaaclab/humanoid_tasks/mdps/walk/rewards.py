@@ -197,9 +197,8 @@ def feet_distance(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, feet_distance_r
 
 def feet_roll(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
-    *_, feet_roll = euler_xyz_from_quat(asset.data.body_quat_w[:, asset_cfg.body_ids].reshape(-1, 4))
-    feet_roll = feet_roll.reshape(-1, len(asset_cfg.body_ids))
-    # print("feet_roll", feet_roll[0].item())
+    feet_roll, *_ = euler_xyz_from_quat(asset.data.body_quat_w[:, asset_cfg.body_ids].reshape(-1, 4))
+    feet_roll = (wrap_to_pi(feet_roll).reshape(-1, len(asset_cfg.body_ids)))
     return torch.square(feet_roll).sum(dim=-1)
 
 def feet_swing(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, swing_period: float=0.2) -> torch.Tensor:

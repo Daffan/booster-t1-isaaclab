@@ -9,7 +9,7 @@
 
 import argparse
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # local imports
 import cli_args  # isort: skip
@@ -24,7 +24,7 @@ parser.add_argument(
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--viz_joints", action="store_true", default=False, help="Visualize joint.")
-parser.add_argument("--viewer_scale", type=float, default=1.0, help="Viewer scale.")
+parser.add_argument("--viewer_scale", type=float, default=2.0, help="Viewer scale.")
 
 parser.add_argument("--vel_x", type=float, default=1.0, help="X linear velocity.")
 parser.add_argument("--vel_y", type=float, default=0.0, help="Y linear velocity.")
@@ -53,21 +53,29 @@ import numpy as np
 
 from rsl_rl.runners import OnPolicyRunner
 
-from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
-from omni.isaac.lab.utils.dict import print_dict
+from isaaclab.humanoid_tasks.learning.runners import OnPolicyRunner, ROARunner
 
-import omni.isaac.lab_tasks  # noqa: F401
-from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
-    RslRlOnPolicyRunnerCfg,
-    RslRlVecEnvWrapper,
-    export_policy_as_jit,
-    export_policy_as_onnx,
+from isaaclab.envs import (
+    DirectMARLEnv,
+    DirectMARLEnvCfg,
+    DirectRLEnvCfg,
+    ManagerBasedRLEnvCfg,
+    multi_agent_to_single_agent,
 )
-from omni.isaac.lab.assets import Articulation, RigidObject
-from omni.isaac.lab.envs.mdp.commands import UniformVelocityCommandCfg
+from isaaclab.utils.dict import print_dict
+from isaaclab.utils.io import dump_pickle, dump_yaml
+from isaaclab.assets import Articulation, RigidObject
 
 import isaaclab.humanoid_tasks.tasks
+from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
+from isaaclab_tasks.utils.hydra import hydra_task_config
+from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, export_policy_as_jit, export_policy_as_onnx
+from isaaclab.humanoid_tasks.learning.env.vecenv_wrapper import RslRlVecEnvWrapper
+
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
+torch.backends.cudnn.deterministic = False
+torch.backends.cudnn.benchmark = False
 
 
 def main():
@@ -120,20 +128,20 @@ def main():
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
-    ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    ppo_runner = ROARunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
     ppo_runner.load(resume_path)
 
     # obtain the trained policy for inference
     policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
 
     # export policy to onnx/jit
-    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    export_policy_as_jit(
-        ppo_runner.alg.actor_critic, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt"
-    )
-    export_policy_as_onnx(
-        ppo_runner.alg.actor_critic, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
-    )
+    # export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+    # export_policy_as_jit(
+    #     ppo_runner.alg.actor_critic, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt"
+    # )
+    # export_policy_as_onnx(
+    #     ppo_runner.alg.actor_critic, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
+    # )
 
     # record the dof pos
     if True:
@@ -167,9 +175,11 @@ def main():
 
             # env stepping
             obs, _, _, _ = env.step(actions)
-            contacts.append(env.env.env.env.scene.sensors["contact_forces"].data.net_forces_w[0, [17, 23], 2].detach().cpu().numpy())
+            # contacts.append(env.env.env.env.scene.sensors["contact_forces"].data.net_forces_w[0, [17, 23], 2].detach().cpu().numpy())
             dof_pos_list.append(robot_asset.data.joint_pos[0, :].detach().cpu().numpy())
             obss.append(obs[0, :].detach().cpu().numpy())
+            # height
+            # print(f"Height: {robot_asset.data.root_pos_w[0, 2].detach().cpu().numpy()}")
         if args_cli.video:
             # print(float(timestep) / args_cli.video_length)
             timestep += 1

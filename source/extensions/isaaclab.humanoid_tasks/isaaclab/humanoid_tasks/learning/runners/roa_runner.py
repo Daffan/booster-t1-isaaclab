@@ -71,7 +71,8 @@ class OnPolicyRunner:
         self.tot_time = 0
         self.current_learning_iteration = 0
         self.git_status_repos = [locomotion.__file__]
-        self.dagger_update_freq = self.cfg["dagger_update_freq"]
+        self.adaptation_update_freq = self.cfg["adaptation_update_freq"]
+        self.dagger_update_start_iter = self.cfg["dagger_update_start_iter"]
 
     def learn(self, num_learning_iterations: int, init_at_random_ep_len: bool = False):
         # initialize writer
@@ -114,7 +115,9 @@ class OnPolicyRunner:
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             start = time.time()
-            hist_encoding = it % self.dagger_update_freq == 0
+            adaptation_update = it % self.adaptation_update_freq == 0
+            dagger_update = it >= self.dagger_update_start_iter
+            hist_encoding = dagger_update or adaptation_update
             # Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
@@ -156,13 +159,17 @@ class OnPolicyRunner:
                 start = stop
                 self.alg.compute_returns(critic_obs)
 
-            if hist_encoding:
-                mean_hist_latent_loss = self.alg.update_dagger()
-                mean_value_loss, mean_surrogate_loss, \
-                mean_priv_reg_loss, priv_reg_coef = 0, 0, 0, 0
+            if dagger_update:
+                mean_value_loss, mean_surrogate_loss = self.alg.update_dagger()
+                mean_priv_reg_loss, priv_reg_coef = 0, 0
             else:
-                mean_value_loss, mean_surrogate_loss, \
-                mean_priv_reg_loss, priv_reg_coef = self.alg.update()
+                if adaptation_update:
+                    mean_hist_latent_loss = self.alg.update_adaptation()
+                    mean_value_loss, mean_surrogate_loss, \
+                    mean_priv_reg_loss, priv_reg_coef = 0, 0, 0, 0
+                else:
+                    mean_value_loss, mean_surrogate_loss, \
+                    mean_priv_reg_loss, priv_reg_coef = self.alg.update()
 
             stop = time.time()
             learn_time = stop - start
@@ -211,13 +218,14 @@ class OnPolicyRunner:
         mean_std = self.alg.actor_critic.std.mean()
         fps = int(self.num_steps_per_env * self.env.num_envs / (locs["collection_time"] + locs["learn_time"]))
 
-        if locs["hist_encoding"]:
+        if locs["adaptation_update"]:
             self.writer.add_scalar("Loss/hist_latent", locs["mean_hist_latent_loss"], locs["it"])
         else:
             self.writer.add_scalar("Loss/value_function", locs["mean_value_loss"], locs["it"])
             self.writer.add_scalar("Loss/surrogate", locs["mean_surrogate_loss"], locs["it"])
-            self.writer.add_scalar("Loss/privilege_reg", locs["mean_priv_reg_loss"], locs["it"])
-            self.writer.add_scalar("Loss/privilege_reg_coef", locs["priv_reg_coef"], locs["it"])
+            if not locs["dagger_update"]:
+                self.writer.add_scalar("Loss/privilege_reg", locs["mean_priv_reg_loss"], locs["it"])
+                self.writer.add_scalar("Loss/privilege_reg_coef", locs["priv_reg_coef"], locs["it"])
 
         self.writer.add_scalar("Loss/learning_rate", self.alg.learning_rate, locs["it"])
         self.writer.add_scalar("Policy/mean_noise_std", mean_std.item(), locs["it"])

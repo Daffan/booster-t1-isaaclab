@@ -18,7 +18,7 @@ usd_relative_path = '../assets/usd'
 usd_path = os.path.abspath(os.path.join(file_dir, usd_relative_path))
 
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import ImplicitActuatorCfg, IdealPDActuatorCfg
+from isaaclab.actuators import ImplicitActuatorCfg, IdealPDActuatorCfg, DelayedPDActuatorCfg
 from isaaclab.assets import ArticulationCfg
 from isaaclab.actuators import DelayedPDActuatorCfg, RemotizedPDActuatorCfg
 
@@ -89,7 +89,7 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
         }
     ),
     actuators={
-        "legs": IdealPDActuatorCfg(
+        "legs": DelayedPDActuatorCfg(
             joint_names_expr=[
                 "Left_Hip_Pitch",
                 "Left_Hip_Roll",
@@ -102,9 +102,11 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             ],
             stiffness=150,
             damping=5,
-            effort_limit=60
+            effort_limit=60,
+            max_delay=10,
+            min_delay=0,
         ),
-        "feet": IdealPDActuatorCfg(
+        "feet": DelayedPDActuatorCfg(
             joint_names_expr=[
                 "Left_Ankle_Pitch",
                 "Right_Ankle_Pitch",
@@ -113,7 +115,9 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             ],
             stiffness=25,
             damping=1,
-            effort_limit=25
+            effort_limit=25,
+            max_delay=10,
+            min_delay=0,
         )
     },
 )

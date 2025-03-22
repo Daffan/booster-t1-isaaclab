@@ -18,7 +18,7 @@ usd_relative_path = '../assets/usd'
 usd_path = os.path.abspath(os.path.join(file_dir, usd_relative_path))
 
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import ImplicitActuatorCfg, IdealPDActuatorCfg
+from isaaclab.actuators import ImplicitActuatorCfg, IdealPDActuatorCfg, DelayedPDActuatorCfg
 from isaaclab.assets import ArticulationCfg
 from isaaclab.actuators import DelayedPDActuatorCfg, RemotizedPDActuatorCfg
 
@@ -74,16 +74,18 @@ T1_CFG = ArticulationCfg(
             "Left_Elbow_Pitch": 0.0,
             "Left_Elbow_Yaw": -0.5,
             'Waist': 0.0,
-            'Left_Hip_Pitch': -0.1,
+            'Left_Hip_Pitch': -0.2,
             'Left_Hip_Roll': 0.0,
             'Left_Hip_Yaw': 0.0,
-            'Left_Knee_Pitch': 0.2,
-            'Left_Ankle_Pitch': -0.1,
-            'Right_Hip_Pitch': -0.1,
+            'Left_Knee_Pitch': 0.4,
+            'Left_Ankle_Pitch': -0.25,
+            'Left_Ankle_Roll': 0.0,
+            'Right_Hip_Pitch': -0.2,
             'Right_Hip_Roll': 0.0,
             'Right_Hip_Yaw': 0.0,
-            'Right_Knee_Pitch': 0.2,
-            'Right_Ankle_Pitch': -0.1,
+            'Right_Knee_Pitch': 0.4,
+            'Right_Ankle_Pitch': -0.25,
+            'Right_Ankle_Roll': 0.0,
         }
     ),
     actuators={
@@ -92,8 +94,10 @@ T1_CFG = ArticulationCfg(
                 "AAHead_yaw",
                 "Head_pitch",
             ],
-            stiffness=200,
-            damping=10,
+            stiffness=20,
+            damping=0.2,
+            armature=0.2,
+            friction=0.1
         ),
         "arms": IdealPDActuatorCfg(
             joint_names_expr=[
@@ -106,13 +110,17 @@ T1_CFG = ArticulationCfg(
                 "Left_Elbow_Pitch",
                 "Left_Elbow_Yaw",
             ],
-            stiffness=150,
-            damping=8,
+            stiffness=20,
+            damping=0.5,
+            armature=0.2,
+            friction=0.1
         ),
         "waist": IdealPDActuatorCfg(
             joint_names_expr=["Waist"],
-            stiffness=100,
-            damping=15,
+            stiffness=150,
+            damping=5,
+            armature=0.2,
+            friction=0.1
         ),
         "legs": IdealPDActuatorCfg(
             joint_names_expr=[
@@ -125,8 +133,10 @@ T1_CFG = ArticulationCfg(
                 "Right_Hip_Yaw",
                 "Right_Knee_Pitch",
             ],
-            stiffness=100,
+            stiffness=200,
             damping=5,
+            armature=0.1,
+            friction=0.2,
         ),
         "feet": IdealPDActuatorCfg(
             joint_names_expr=[
@@ -135,8 +145,10 @@ T1_CFG = ArticulationCfg(
                 "Left_Ankle_Roll",
                 "Right_Ankle_Roll"
             ],
-            stiffness=25,
+            stiffness=50,
             damping=1,
+            armature=0.1,
+            friction=0.2,
         )
     },
 )

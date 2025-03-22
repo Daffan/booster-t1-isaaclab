@@ -74,50 +74,75 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             'Right_Knee_Pitch': 0.4,
             'Right_Ankle_Pitch': -0.25,
             'Right_Ankle_Roll': 0.0,
-            # 'Left_Hip_Pitch': -0.1,
-            # 'Left_Hip_Roll': 0.0,
-            # 'Left_Hip_Yaw': 0.0,
-            # 'Left_Knee_Pitch': 0.2,
-            # 'Left_Ankle_Pitch': -0.1,
-            # 'Left_Ankle_Roll': 0.0,
-            # 'Right_Hip_Pitch': -0.1,
-            # 'Right_Hip_Roll': 0.0,
-            # 'Right_Hip_Yaw': 0.0,
-            # 'Right_Knee_Pitch': 0.2,
-            # 'Right_Ankle_Pitch': -0.1,
-            # 'Right_Ankle_Roll': 0.0,
         }
     ),
     actuators={
-        "legs": DelayedPDActuatorCfg(
+        "Hip_Pitch": DelayedPDActuatorCfg(
             joint_names_expr=[
                 "Left_Hip_Pitch",
-                "Left_Hip_Roll",
-                "Left_Hip_Yaw",
-                "Left_Knee_Pitch",
                 "Right_Hip_Pitch",
-                "Right_Hip_Roll",
-                "Right_Hip_Yaw",
-                "Right_Knee_Pitch",
             ],
-            stiffness=150,
+            stiffness=200,
             damping=5,
-            effort_limit=60,
+            # effort_limit=45,
             max_delay=10,
             min_delay=0,
+            armature=0.05,
+            friction=0.1
         ),
-        "feet": DelayedPDActuatorCfg(
+        "Hip_Roll_Yaw": DelayedPDActuatorCfg(
+            joint_names_expr=[
+                "Left_Hip_Roll",
+                "Right_Hip_Roll",
+                "Left_Hip_Yaw",
+                "Right_Hip_Yaw"
+            ],
+            stiffness=200,
+            damping=5,
+            # effort_limit=30,
+            max_delay=10,
+            min_delay=0,
+            armature=0.05,
+            friction=0.1
+        ),
+        "Knee": DelayedPDActuatorCfg(
+            joint_names_expr=[
+                "Left_Knee_Pitch",
+                "Right_Knee_Pitch"
+            ],
+            stiffness=200,
+            damping=5,
+            # effort_limit=60,
+            max_delay=10,
+            min_delay=0,
+            armature=0.05,
+            friction=0.1
+        ),
+        "Ankle_Pitch": DelayedPDActuatorCfg(
             joint_names_expr=[
                 "Left_Ankle_Pitch",
                 "Right_Ankle_Pitch",
+            ],
+            stiffness=50,
+            damping=1,
+            # effort_limit=24,
+            max_delay=10,
+            min_delay=0,
+            armature=0.05,
+            friction=0.1
+        ),
+        "Ankle_Roll": DelayedPDActuatorCfg(
+            joint_names_expr=[
                 "Left_Ankle_Roll",
                 "Right_Ankle_Roll"
             ],
-            stiffness=25,
+            stiffness=50,
             damping=1,
-            effort_limit=25,
+            # effort_limit=15,
             max_delay=10,
             min_delay=0,
+            armature=0.05,
+            friction=0.1
         )
     },
 )

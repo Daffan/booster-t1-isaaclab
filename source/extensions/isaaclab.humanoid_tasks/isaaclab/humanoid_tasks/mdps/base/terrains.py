@@ -154,7 +154,7 @@ BOOSTER_CFG = terrain_gen.TerrainGeneratorCfg(
     use_cache=False,
     sub_terrains={
         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-            proportion=0.5, noise_range=(-0.03, 0.03), noise_step=0.005, downsampled_scale=0.2
+            proportion=0.5, noise_range=(-0.03, 0.03), noise_step=0.005, downsampled_scale=0.3
         ),
         "discrete": terrain_gen.HfDiscreteObstaclesTerrainCfg(
             obstacle_width_range=(1., 2.), obstacle_height_range=(0.01, 0.02), num_obstacles=20, platform_width=3.0

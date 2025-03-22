@@ -30,12 +30,14 @@ class PPO:
         schedule="fixed",
         desired_kl=0.01,
         device="cpu",
+        boostraping=True,  # whether to bootstrap on timeouts
     ):
         self.device = device
 
         self.desired_kl = desired_kl
         self.schedule = schedule
         self.learning_rate = learning_rate
+        self.boostraping = boostraping
 
         # PPO components
         self.actor_critic = actor_critic
@@ -84,11 +86,11 @@ class PPO:
         self.transition.rewards = rewards.clone()
         self.transition.dones = dones
         # Bootstrapping on time outs
-        if "time_outs" in infos:
+        if "time_outs" in infos and self.boostraping:
             self.transition.rewards += self.gamma * torch.squeeze(
                 self.transition.values * infos["time_outs"].unsqueeze(1).to(self.device), 1
             )
-
+        # print(self.transition.rewards.max(), self.transition.rewards.min(), "time_outs" in infos and self.boostraping)
         # Record the transition
         self.storage.add_transitions(self.transition)
         self.transition.clear()
@@ -180,6 +182,60 @@ class PPO:
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
             mean_bound_loss += bound_loss.item()
+
+        num_updates = self.num_learning_epochs * self.num_mini_batches
+        mean_value_loss /= num_updates
+        mean_surrogate_loss /= num_updates
+        mean_bound_loss /= num_updates
+        self.storage.clear()
+
+        return mean_value_loss, mean_surrogate_loss, mean_bound_loss
+    
+    def update_value(self):
+        mean_value_loss = 0
+        mean_surrogate_loss = 0
+        mean_bound_loss = 0
+        if self.actor_critic.is_recurrent:
+            generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
+        else:
+            generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
+        for (
+            obs_batch,
+            critic_obs_batch,
+            actions_batch,
+            target_values_batch,
+            advantages_batch,
+            returns_batch,
+            old_actions_log_prob_batch,
+            old_mu_batch,
+            old_sigma_batch,
+            hid_states_batch,
+            masks_batch,
+        ) in generator:
+            value_batch = self.actor_critic.evaluate(
+                critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1]
+            )
+
+            # Value function loss
+            if self.use_clipped_value_loss:
+                value_clipped = target_values_batch + (value_batch - target_values_batch).clamp(
+                    -self.clip_param, self.clip_param
+                )
+                value_losses = (value_batch - returns_batch).pow(2)
+                value_losses_clipped = (value_clipped - returns_batch).pow(2)
+                value_loss = torch.max(value_losses, value_losses_clipped).mean()
+            else:
+                value_loss = (returns_batch - value_batch).pow(2).mean()
+
+            loss = self.value_loss_coef * value_loss
+
+            # Gradient step
+            self.optimizer.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+            self.optimizer.step()
+
+            mean_value_loss += value_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates

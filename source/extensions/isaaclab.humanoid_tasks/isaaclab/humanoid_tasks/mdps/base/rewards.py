@@ -71,7 +71,6 @@ def base_height_reward(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, target_hei
     asset: RigidObject = env.scene[asset_cfg.name]
     # compute the error
     base_height_error = torch.square(asset.data.root_pos_w[:, 2] - target_height)
-    print(asset.data.root_pos_w[:, 2])
     return torch.exp(-base_height_error / std)
 
 def base_orientation_penalty(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:

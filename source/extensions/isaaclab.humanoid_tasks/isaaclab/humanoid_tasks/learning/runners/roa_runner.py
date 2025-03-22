@@ -117,6 +117,7 @@ class OnPolicyRunner:
             start = time.time()
             adaptation_update = it % self.adaptation_update_freq == 0
             dagger_update = it >= self.dagger_update_start_iter
+            adaptation_update = (it % self.adaptation_update_freq == 0) and (not dagger_update)
             hist_encoding = dagger_update or adaptation_update
             # Rollout
             with torch.inference_mode():
@@ -160,15 +161,15 @@ class OnPolicyRunner:
                 self.alg.compute_returns(critic_obs)
 
             if dagger_update:
-                mean_value_loss, mean_surrogate_loss = self.alg.update_dagger()
+                mean_value_loss, mean_surrogate_loss, mean_bound_loss = self.alg.update_dagger()
                 mean_priv_reg_loss, priv_reg_coef = 0, 0
             else:
                 if adaptation_update:
                     mean_hist_latent_loss = self.alg.update_adaptation()
                     mean_value_loss, mean_surrogate_loss, \
-                    mean_priv_reg_loss, priv_reg_coef = 0, 0, 0, 0
+                    mean_bound_loss, mean_priv_reg_loss, priv_reg_coef = 0, 0, 0, 0, 0
                 else:
-                    mean_value_loss, mean_surrogate_loss, \
+                    mean_value_loss, mean_surrogate_loss, mean_bound_loss, \
                     mean_priv_reg_loss, priv_reg_coef = self.alg.update()
 
             stop = time.time()
@@ -223,6 +224,7 @@ class OnPolicyRunner:
         else:
             self.writer.add_scalar("Loss/value_function", locs["mean_value_loss"], locs["it"])
             self.writer.add_scalar("Loss/surrogate", locs["mean_surrogate_loss"], locs["it"])
+            self.writer.add_scalar("Loss/bound", locs["mean_bound_loss"], locs["it"])
             if not locs["dagger_update"]:
                 self.writer.add_scalar("Loss/privilege_reg", locs["mean_priv_reg_loss"], locs["it"])
                 self.writer.add_scalar("Loss/privilege_reg_coef", locs["priv_reg_coef"], locs["it"])
@@ -255,8 +257,9 @@ class OnPolicyRunner:
                             'collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
                 f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                 f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
+                f"""{'Bound loss:':>{pad}} {locs['mean_bound_loss']:.4f}\n"""
                 f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
-                f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
+                f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.3e}\n"""
                 f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n"""
             )
             #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
@@ -269,6 +272,7 @@ class OnPolicyRunner:
                             'collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
                 f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                 f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
+                f"""{'Bound loss:':>{pad}} {locs['mean_bound_loss']:.4f}\n"""
                 f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
             )
             #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
@@ -303,7 +307,7 @@ class OnPolicyRunner:
 
     def load(self, path, load_optimizer=True):
         loaded_dict = torch.load(path)
-        self.alg.actor_critic.load_state_dict(loaded_dict["model_state_dict"])
+        self.alg.actor_critic.load_state_dict(loaded_dict["model_state_dict"], strict=False)
         if self.empirical_normalization:
             self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
             self.critic_obs_normalizer.load_state_dict(loaded_dict["critic_obs_norm_state_dict"])

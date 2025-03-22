@@ -113,7 +113,7 @@ class ObservationsCfg:
     @configclass
     class CriticCfg(ObsGroup):
         """Observations for privilege group."""
-        # privilege group observations
+        # proprioceptive observations
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity,
             noise=Gnoise(mean=0.0, std=0.01),
@@ -128,7 +128,7 @@ class ObservationsCfg:
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Gnoise(mean=0.0, std=0.1), scale=0.1)  # [12]
         actions = ObsTerm(func=mdp.last_action, scale=1.0)  # [12]
 
-        # proprioceptive observations
+        # privilege group observations
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         feet_body_forces = ObsTerm(
             func=mdp.body_incoming_wrench,
@@ -145,6 +145,7 @@ class ObservationsCfg:
         joint_stiffness = ObsTerm(func=bmdp.joint_stiffness, params={"asset_cfg": SceneEntityCfg("robot")})
         joint_damping = ObsTerm(func=bmdp.joint_damping, params={"asset_cfg": SceneEntityCfg("robot")})
         joint_friction = ObsTerm(func=bmdp.joint_friction, params={"asset_cfg": SceneEntityCfg("robot")})
+        joint_armature = ObsTerm(func=bmdp.joint_armature, params={"asset_cfg": SceneEntityCfg("robot")})
 
     @configclass
     class PolicyCfg(ObsGroup):
@@ -225,10 +226,10 @@ class EventCfg:
         func=mdp.randomize_rigid_body_material,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.3, 1.0),
-            "dynamic_friction_range": (0.3, 0.8),
-            "restitution_range": (0.0, 0.0),
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
+            "static_friction_range": (0.1, 2.0),
+            "dynamic_friction_range": (0.1, 1.2),
+            "restitution_range": (0.1, 0.9),
             "num_buckets": 64,
         },
     )
@@ -260,19 +261,20 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "stiffness_distribution_params": (0.9, 1.1),
-            "damping_distribution_params": (0.9, 1.1),
+            "stiffness_distribution_params": (0.95, 1.05),
+            "damping_distribution_params": (0.95, 1.05),
             "operation": "scale",
             "distribution": "log_uniform",
         },
     )
 
-    randomize_joint_friction = EventTerm(
+    randomize_joint_parameters = EventTerm(
         func=mdp.randomize_joint_parameters,
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "friction_distribution_params": (0.02, 0.1),
+            "friction_distribution_params": (0.0, 0.1),
+            "armature_distribution_params": (0.0, 0.05),
             "operation": "abs",
             "distribution": "uniform",
         },
@@ -282,13 +284,14 @@ class EventCfg:
 
     # # reset
     base_external_force_torque = EventTerm(
-        func=mdp.apply_external_force_torque,
+        func=bmdp.apply_external_force_torque,
         mode="interval",
-        interval_range_s=(4.0, 8.0),
+        interval_range_s=(1.0, 2.0),
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="Trunk"),
             "force_range": (-10.0, 10.0),
             "torque_range": (-2.0, 2.0),
+            "p": 0.2  # probability of applying the force/torque at each step
         },
     )
 
@@ -299,7 +302,13 @@ class EventCfg:
         interval_range_s=(1.5, 4.0),
         params={
             "asset_cfg": SceneEntityCfg("robot"),
-            "velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)},
+            "velocity_range": {
+                "x": (-0.3, 0.3),
+                "y": (-0.3, 0.3),
+                "roll": (-0.1, 0.1),
+                "pitch": (-0.1, 0.1),
+                "yaw": (-0.1, 0.1),
+            },
         },
     )
 
@@ -361,26 +370,77 @@ class TerminationsCfg:
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
+    survival = CurrTerm(
+        func=bmdp.modify_reward_weight,
+        params={
+            "term_name": "survival",
+            "start_step": 1000,
+            "num_steps": 3000,
+            "start_weight": 2.0,
+            "end_weight": 0.25
+        },
+    )
+    tracking_lin_vel_x = CurrTerm(
+        func=bmdp.modify_reward_weight,
+        params={
+            "term_name": "tracking_lin_vel_x",
+            "start_step": 1000,
+            "num_steps": 3000,
+            "start_weight": 5.0,
+            "end_weight": 1.0
+        },
+    )
+    tracking_lin_vel_y = CurrTerm(
+        func=bmdp.modify_reward_weight,
+        params={
+            "term_name": "tracking_lin_vel_y",
+            "start_step": 1000,
+            "num_steps": 3000,
+            "start_weight": 5.0,
+            "end_weight": 1.0
+        },
+    )
+    tracking_ang_vel = CurrTerm(
+        func=bmdp.modify_reward_weight,
+        params={
+            "term_name": "tracking_ang_vel",
+            "start_step": 1000,
+            "num_steps": 3000,
+            "start_weight": 5.0,
+            "end_weight": 0.5
+        },
+    )
+    feet_swing = CurrTerm(
+        func=bmdp.modify_reward_weight,
+        params={
+            "term_name": "feet_swing",
+            "start_step": 1000,
+            "num_steps": 3000,
+            "start_weight": 6.0,
+            "end_weight": 3.0
+        },
+    )
+
 
 @configclass
 class RewardsCfg:
     survival = RewardTermCfg(
         func=bmdp.survival_reward,
-        weight=0.5
+        weight=0.25
     )
     tracking_lin_vel_x = RewardTermCfg(
         func=wmdp.tracking_lin_vel_x,
-        weight=3.0,
+        weight=1.0,
         params={"std": 0.5, "asset_cfg": SceneEntityCfg("robot")},
     )
     tracking_lin_vel_y = RewardTermCfg(
         func=wmdp.tracking_lin_vel_y,
-        weight=3.0,
+        weight=1.0,
         params={"std": 0.5, "asset_cfg": SceneEntityCfg("robot")},
     )
     tracking_ang_vel = RewardTermCfg(
         func=bmdp.tracking_ang_vel_reward,
-        weight=3.0,
+        weight=1.0,
         params={"std": 0.25, "asset_cfg": SceneEntityCfg("robot")},
     )
     feet_swing = RewardTermCfg(
@@ -431,6 +491,11 @@ class RewardsCfg:
         func=wmdp.base_height,
         weight=-20.0,
         params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.67},
+    )
+    ang_vel_xy = RewardTermCfg(
+        func=wmdp.ang_vel_xy,
+        weight=-0.2,
+        params={"asset_cfg": SceneEntityCfg("robot")},
     )
     base_z_velocity = RewardTermCfg(
         func=wmdp.base_z_velocity,
@@ -486,6 +551,151 @@ class RewardsCfg:
         weight=-0.4,
         params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link")}
     )
+    feet_action = RewardTermCfg(
+        func=wmdp.feet_action,
+        weight=-0.5,
+    )  # penalize large foot action for all feet
+
+
+@configclass
+class BoosterRewardsCfg:
+    """ This is exact implementation of booster_gym reward function"""
+    survival = RewardTermCfg(
+        func=bmdp.survival_reward,
+        weight=0.25
+    )
+    tracking_lin_vel_x = RewardTermCfg(
+        func=wmdp.tracking_lin_vel_x,
+        weight=1.0,
+        params={"std": 0.25, "asset_cfg": SceneEntityCfg("robot")},
+    )
+    tracking_lin_vel_y = RewardTermCfg(
+        func=wmdp.tracking_lin_vel_y,
+        weight=1.0,
+        params={"std": 0.25, "asset_cfg": SceneEntityCfg("robot")},
+    )
+    tracking_ang_vel = RewardTermCfg(
+        func=bmdp.tracking_ang_vel_reward,
+        weight=0.5,
+        params={"std": 0.25, "asset_cfg": SceneEntityCfg("robot")},
+    )
+    base_height = RewardTermCfg(
+        func=wmdp.base_height,
+        weight=-20.0,
+        params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.68},
+    )
+    orientation = RewardTermCfg(
+        func=wmdp.orientation,
+        weight=-5.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    torques = RewardTermCfg(
+        func=wmdp.torques,
+        weight=-2.0e-4,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    )
+    # torque_tiredness = RewardTermCfg(
+    #     func=wmdp.torque_tiredness,
+    #     weight=-1.0e-2,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    # )  # cause NaN values
+    power = RewardTermCfg(
+        func=wmdp.power,
+        weight=-2.0e-3,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    )
+    lin_vel_z = RewardTermCfg(
+        func=wmdp.lin_vel_z,
+        weight=-2.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    ang_vel_xy = RewardTermCfg(
+        func=wmdp.ang_vel_xy,
+        weight=-0.2,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    dof_vel = RewardTermCfg(
+        func=wmdp.dof_vel,
+        weight=-1.e-4,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    dof_acc = RewardTermCfg(
+        func=wmdp.dof_acc,
+        weight=-1.e-7,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    root_acc = RewardTermCfg(
+        func=wmdp.root_acc,
+        weight=-1.e-4,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    action_rate = RewardTermCfg(
+        func=wmdp.action_rate,
+        weight=-1.0,
+    )
+    dof_pos_limits = RewardTermCfg(
+        func=wmdp.dof_pos_limits,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    # Not implemented yet
+    # dof_vel_limits = RewardTermCfg(
+    #     func=wmdp.dof_vel_limits,
+    #     weight=-1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )  
+    collision = RewardTermCfg(
+        func=wmdp.collision,
+        weight=-1.0,
+        params={"sensor_cfg": SceneEntityCfg(
+            "contact_forces", 
+            body_names=[
+                'Trunk', 'H1', 'H2', 'AL1', 'AL2', 'AL3', \
+                'AR1', 'AR2', 'AR3', 'Waist', 'Hip_Pitch_Left', \
+                'Hip_Roll_Left', 'Hip_Yaw_Left', 'Shank_Left', \
+                'Ankle_Cross_Left', 'Hip_Pitch_Right', 'Hip_Roll_Right', \
+                'Hip_Yaw_Right', 'Shank_Right', 'Ankle_Cross_Right']
+        )}
+    )
+    feet_slip = RewardTermCfg(
+        func=wmdp.feet_slip,
+        weight=-0.1,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
+            "threshold": 1.0,
+        },
+    )
+    feet_yaw_diff = RewardTermCfg(
+        func=wmdp.feet_yaw_diff,
+        weight=-1.,
+        params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link")}
+    )
+    feet_yaw_mean = RewardTermCfg(
+        func=wmdp.feet_yaw_mean,
+        weight=-1.,
+        params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link")}
+    )
+    feet_roll = RewardTermCfg(
+        func=wmdp.feet_roll,
+        weight=-0.1,
+        params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link")}
+    )
+    feet_distance = RewardTermCfg(
+        func=wmdp.feet_distance,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"), "feet_distance_ref": 0.20}
+    )
+    feet_swing = RewardTermCfg(
+        func=wmdp.feet_swing,
+        weight=3.0,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
+            "swing_period": 0.2,
+        }
+    )
+
 
 @configclass
 class LowerBodyRLEnvCfg(HumanoidRLEnvCfg):
@@ -562,6 +772,15 @@ class LowerBodyHistoryRLEnvCfg(LowerBodyRLEnvCfg):
 
     # Basic settings
     observations: ObservationsHistoryCfg = ObservationsHistoryCfg()
+
+
+@configclass
+class LowerBodyHistoryV1RLEnvCfg(LowerBodyRLEnvCfg):
+    """Configuration for the locomotion velocity-tracking environment with history."""
+
+    # Basic settings
+    observations: ObservationsHistoryCfg = ObservationsHistoryCfg()
+    rewards: BoosterRewardsCfg = BoosterRewardsCfg()  # use the booster rewards for the history env
 
 
 @configclass

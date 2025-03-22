@@ -93,8 +93,9 @@ class WholeBodyCfg(InteractiveSceneCfg):
 class LowerBodyCfg(WholeBodyCfg):
     robot: ArticulationCfg = T1_LOCOMOTION_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
+
 @configclass
-class CommandsCfg:
+class PreCommandsCfg:
     """Command specifications for the MDP."""
     base_velocity = wmdp.UniformVelocityFreqCommandCfg(
         class_type=wmdp.UniformVelocityFreqCommand,
@@ -105,8 +106,27 @@ class CommandsCfg:
         heading_command=False,
         debug_vis=True,
         ranges=wmdp.UniformVelocityFreqCommandCfg.Ranges(
-            lin_vel_x=(0.0, 1.5), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 1.0), gait_frequency=(1.0, 2.0)  # these are dummy values
-            # lin_vel_x=(-1.0, 1.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), gait_frequency=(1.0, 2.0)
+            lin_vel_x=(0.0, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 1.0), gait_frequency=(1.0, 2.0)  # commands used for acquire basic walking gait
+        ),
+    )
+
+
+@configclass
+class KickCommandsCfg:
+    """
+    Command specifications for the Kick MDP.
+    Always run at hightest speed
+    """
+    base_velocity = wmdp.UniformVelocityFreqCommandCfg(
+        class_type=wmdp.UniformVelocityFreqCommand,
+        asset_name="robot",
+        resampling_time_range=(8.0, 12.0),
+        rel_standing_envs=0.1,
+        rel_heading_envs=0.0,
+        heading_command=False,
+        debug_vis=True,
+        ranges=wmdp.UniformVelocityFreqCommandCfg.Ranges(
+            lin_vel_x=(1.0, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(1.0, 1.0), gait_frequency=(2.0, 2.0)  # commands used for acquire basic walking gait
         ),
     )
 
@@ -128,17 +148,39 @@ class ObservationsCfg:
     """Observation specifications for the MDP."""
 
     @configclass
+    class PrivilegedCfg(ObsGroup):
+        """Privileged observations for policy group."""
+        # privileged observation terms (order preserved)
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
+        feet_body_forces = ObsTerm(
+            func=mdp.body_incoming_wrench,
+            scale=0.01,
+            params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link")},
+        )
+        base_body_forces = ObsTerm(
+            func=mdp.body_incoming_wrench,
+            scale=0.01,
+            params={"asset_cfg": SceneEntityCfg("robot", body_names="Trunk")},
+        )
+        rigid_body_mass = ObsTerm(func=bmdp.rigid_body_mass, params={"asset_cfg": SceneEntityCfg("robot")})
+        body_height = ObsTerm(func=bmdp.body_height, params={"asset_cfg": SceneEntityCfg("robot")})
+        joint_stiffness = ObsTerm(func=bmdp.joint_stiffness, params={"asset_cfg": SceneEntityCfg("robot")})
+        joint_damping = ObsTerm(func=bmdp.joint_damping, params={"asset_cfg": SceneEntityCfg("robot")})
+        joint_friction = ObsTerm(func=bmdp.joint_friction, params={"asset_cfg": SceneEntityCfg("robot")})
+        # TODO: add ball related privileged infos
+
+    @configclass
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
         # observation terms (order preserved)
-        base_z = ObsTerm(func=mdp.base_pos_z, noise=Unoise(n_min=-0.05, n_max=0.05))  # [1]
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))  # [3]
+        history_length = -1
+        flatten_history_dim = True
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.05, n_max=0.05))  # [3]
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )  # [3]
-        ball_root_pos = ObsTerm(
+        ball_rel_pos = ObsTerm(
             func=kmdp.ball_rel_pos,
             noise=Unoise(n_min=-0.05, n_max=0.05),
             params={
@@ -147,7 +189,7 @@ class ObservationsCfg:
             },
             scale=0.1
         )  # [3]
-        ball_root_vel = ObsTerm(
+        ball_rel_vel = ObsTerm(
             func=kmdp.ball_rel_vel,
             noise=Unoise(n_min=-0.1, n_max=0.1),
             params={
@@ -156,7 +198,7 @@ class ObservationsCfg:
             },
             scale=0.1
         )  # [3]
-        goal_root_pos = ObsTerm(
+        goal_rel_pos = ObsTerm(
             func=kmdp.goal_rel_pos,
             noise=Unoise(n_min=-0.05, n_max=0.05),
             params={
@@ -168,22 +210,11 @@ class ObservationsCfg:
         joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.005, n_max=0.005))  # [10]
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.01, n_max=0.01), scale=0.1)  # [10]
         actions = ObsTerm(func=mdp.last_action, scale=0.1)  # [10]
-        # contact_pattern = ObsTerm(
-        #     func=bmdp.contact_pattern,
-        #     params={
-        #         "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
-        #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
-        #     }
-        # )  # [2]
-        # phase_time_clock = ObsTerm(
-        #     func=bmdp.time_clock,
-        #     params={}
-        # )  # [3] internal time clock of the motion
         gait_progress = ObsTerm(
             func=wmdp.gait_progress_obs,
             params={}
         )  # [2] internal time clock of the motion
-        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})  # [4]
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})  # [3]
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -191,12 +222,96 @@ class ObservationsCfg:
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
+    privilege: PrivilegedCfg = PrivilegedCfg()
 
 
 @configclass
-class EventCfg:
-    """Configuration for randomization."""
+class ObservationsHistoryCfg(ObservationsCfg):
+    """Observation history specifications for the MDP."""
+    # observation groups
+    policy: ObservationsCfg.PolicyCfg = ObservationsCfg.PolicyCfg(
+        history_length=50,  # 3 steps of history
+        flatten_history_dim=False,  # keep the history dimension
+    )
 
+
+@configclass
+class ObservationPrivCfg:
+    """Policy input also contains the previleged observations."""
+    # observation groups
+    @configclass
+    class PrivilegedCfg(ObsGroup):
+        history_length = -1
+        flatten_history_dim = True
+        """Privileged observations for policy group."""
+        # privileged observation terms (order preserved)
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
+        feet_body_forces = ObsTerm(
+            func=mdp.body_incoming_wrench,
+            scale=0.01,
+            params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link")},
+        )
+        base_body_forces = ObsTerm(
+            func=mdp.body_incoming_wrench,
+            scale=0.01,
+            params={"asset_cfg": SceneEntityCfg("robot", body_names="Trunk")},
+        )
+        rigid_body_mass = ObsTerm(func=bmdp.rigid_body_mass, params={"asset_cfg": SceneEntityCfg("robot")})
+        body_height = ObsTerm(func=bmdp.body_height, params={"asset_cfg": SceneEntityCfg("robot")})
+        joint_stiffness = ObsTerm(func=bmdp.joint_stiffness, params={"asset_cfg": SceneEntityCfg("robot")})
+        joint_damping = ObsTerm(func=bmdp.joint_damping, params={"asset_cfg": SceneEntityCfg("robot")})
+        joint_friction = ObsTerm(func=bmdp.joint_friction, params={"asset_cfg": SceneEntityCfg("robot")})
+        # TODO: add ball related privileged infos
+
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.05, n_max=0.05))  # [3]
+        projected_gravity = ObsTerm(
+            func=mdp.projected_gravity,
+            noise=Unoise(n_min=-0.05, n_max=0.05),
+        )  # [3]
+        ball_rel_pos = ObsTerm(
+            func=kmdp.ball_rel_pos,
+            noise=Unoise(n_min=-0.05, n_max=0.05),
+            params={
+                "robot_asset_cfg": SceneEntityCfg("robot"),
+                "ball_asset_cfg": SceneEntityCfg("ball"),
+            },
+            scale=0.1
+        )  # [3]
+        ball_rel_vel = ObsTerm(
+            func=kmdp.ball_rel_vel,
+            noise=Unoise(n_min=-0.1, n_max=0.1),
+            params={
+                "robot_asset_cfg": SceneEntityCfg("robot"),
+                "ball_asset_cfg": SceneEntityCfg("ball"),
+            },
+            scale=0.1
+        )  # [3]
+        goal_rel_pos = ObsTerm(
+            func=kmdp.goal_rel_pos,
+            noise=Unoise(n_min=-0.05, n_max=0.05),
+            params={
+                "robot_asset_cfg": SceneEntityCfg("robot"),
+                "goal_asset_cfg": SceneEntityCfg("goal"),
+            },
+            scale=0.1
+        )  # [2]
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.005, n_max=0.005))  # [10]
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.01, n_max=0.01), scale=0.1)  # [10]
+        actions = ObsTerm(func=mdp.last_action, scale=0.1)  # [10]
+        gait_progress = ObsTerm(
+            func=wmdp.gait_progress_obs,
+            params={}
+        )  # [2] internal time clock of the motion
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})  # [3]
+
+    policy: PrivilegedCfg = PrivilegedCfg()
+    critic: PrivilegedCfg = PrivilegedCfg()
+
+
+@configclass
+class BaseEventCfg:
+    """Configuration for randomization."""
+    # TODO: align the domain randomization with the walking so the policy can be deployed to robot
     # startup
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
@@ -270,22 +385,6 @@ class EventCfg:
             },
         },
     )
-    reset_ball_goal = EventTerm(
-        func=kmdp.reset_ball_goal_pos,
-        mode="reset",
-        params={
-            "ball_asset_cfg": SceneEntityCfg("ball"),
-            "goal_asset_cfg": SceneEntityCfg("goal"),
-            "ball_pose_range": {
-                "radius": (3.0, 5.0),
-            },
-            "goal_pose_range": {
-                "x": (-4.0, 4.0),
-                "y": (-4.0, 4.0),
-            },
-            "minimum_distance": 0.3,
-        },
-    )
     reset_robot_joints = EventTerm(
         func=bmdp.reset_joints_around_default,
         mode="reset",
@@ -306,8 +405,29 @@ class EventCfg:
         },
     )
 
+
 @configclass
-class KickEventCfg(EventCfg):
+class PreEventCfg(BaseEventCfg):
+    reset_ball_goal = EventTerm(
+        func=kmdp.reset_ball_goal_pos,
+        mode="reset",
+        params={
+            "ball_asset_cfg": SceneEntityCfg("ball"),
+            "goal_asset_cfg": SceneEntityCfg("goal"),
+            "ball_pose_range": {
+                "radius": (3.0, 5.0),
+            },  # ball is radius_min to radius_max away from the robot
+            "goal_pose_range": {
+                "x": (-4.0, 4.0),
+                "y": (-4.0, 4.0),
+            },  # relative goal location to the ball
+            "minimum_distance": 0.3,
+        },
+    )
+
+
+@configclass
+class KickEventCfg(BaseEventCfg):
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
@@ -337,19 +457,20 @@ class KickEventCfg(EventCfg):
             "ball_asset_cfg": SceneEntityCfg("ball"),
             "goal_asset_cfg": SceneEntityCfg("goal"),
             "ball_pose_range": {
-                "radius": (0.0, 2.0),
+                "radius": (0.5, 1.5),
                 "angle": (0.0, 0.0),
             },
             "goal_pose_range": {
-                "x": (1.0, 4.0),
-                "y": (-1.5, 1.5),
+                "x": (3.0, 4.0),
+                "y": (-1.0, 1.0),
             },
             "minimum_distance": 0.3,
         },
     )
 
+
 @configclass
-class TerminationsCfg:
+class PreTerminationsCfg:
     """Termination terms for the MDP."""
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     humanoid_fall = DoneTerm(
@@ -360,85 +481,20 @@ class TerminationsCfg:
             "max_roll": 0.7,
             "min_height": 0.3,
         })
-    # ball_reach_goal = DoneTerm(
-    #     func=kmdp.ball_reach_goal,
-    #     params={
-    #         "ball_asset_cfg": SceneEntityCfg("ball"),
-    #         "goal_asset_cfg": SceneEntityCfg("goal"),
-    #         "goal_radius": 0.3,
-    #     })
+
+
+@configclass
+class KickTerminationsCfg(PreTerminationsCfg):
+    """Keep the same"""
 
 
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
+
 @configclass
-class WalkRewardCfg:
-    # approach_ball_lin_vel = RewardTermCfg(
-    #     func=kmdp.approach_ball_lin_vel,
-    #     weight=5.0,
-    #     params={
-    #         "robot_asset_cfg": SceneEntityCfg("robot"),
-    #         "ball_asset_cfg": SceneEntityCfg("ball"),
-    #         "vel_clip": 1.0,
-    #         "distance_threshold": 0.0  # don't turn off upon reach
-    #     },
-    # )
-    # approach_ball_yaw = RewardTermCfg(
-    #     func=kmdp.approach_ball_yaw,
-    #     weight=5.0,
-    #     params={
-    #         "robot_asset_cfg": SceneEntityCfg("robot"),
-    #         "ball_asset_cfg": SceneEntityCfg("ball"),
-    #         "std": 0.5,
-    #         "distance_threshold": 0.50  # once reach within 0.25 meter, don't encourage aligning ball and robot
-    #     },
-    # )
-    survival = RewardTermCfg(
-        func=wmdp.survival,
-        weight=2.0,
-        params={},
-    )
-    approach_ball_lin_vel = RewardTermCfg(
-        func=kmdp.approach_ball_lin_vel_exp,
-        weight=4.0,
-        params={
-            "robot_asset_cfg": SceneEntityCfg("robot"),
-            "ball_asset_cfg": SceneEntityCfg("ball"),
-            "std": 0.5,
-            "distance_threshold": 0.0  # don't turn off upon reach
-        },
-    )
-    approach_ball_yaw = RewardTermCfg(
-        func=kmdp.approach_ball_ang_vel,
-        weight=2.0,
-        params={
-            "robot_asset_cfg": SceneEntityCfg("robot"),
-            "ball_asset_cfg": SceneEntityCfg("ball"),
-            "std": 0.5,
-            "distance_threshold": 0.50  # once reach within 0.25 meter, don't encourage aligning ball and robot
-        },
-    )
-    feet_swing = RewardTermCfg(
-        func=wmdp.feet_swing,
-        weight=2.0,
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
-            "swing_period": 0.2,
-        }
-    )
-    # base_angular_velocity = RewardTermCfg(
-    #     func=bmdp.base_angular_velocity_reward,
-    #     weight=5.0,
-    #     params={"std": 0.5, "asset_cfg": SceneEntityCfg("robot")},
-    # )
-    # base_linear_velocity = RewardTermCfg(
-    #     func=bmdp.base_linear_velocity_reward,
-    #     weight=10.0,
-    #     params={"std": 0.25, "ramp_rate": 0.5, "ramp_at_vel": 1.0, "asset_cfg": SceneEntityCfg("robot")},
-    # )
+class RegularizationRewardsCfg:
     action_smoothness = RewardTermCfg(
         func=bmdp.action_rate1_reward,
         weight=-1.0e-5
@@ -479,6 +535,16 @@ class WalkRewardCfg:
         weight=-20.0,
         params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.67},
     )
+    ang_vel_xy = RewardTermCfg(
+        func=wmdp.ang_vel_xy,
+        weight=-0.2,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    base_z_velocity = RewardTermCfg(
+        func=wmdp.base_z_velocity,
+        weight=-3.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
     collision = RewardTermCfg(
         func=wmdp.collision,
         weight=-1.0,
@@ -492,19 +558,59 @@ class WalkRewardCfg:
                 'Hip_Yaw_Right', 'Shank_Right', 'Ankle_Cross_Right']
         )}
     )
-    standstill = RewardTermCfg(
-        func=wmdp.standstill,
-        weight=1.0,
-        params={
-            "asset_cfg": SceneEntityCfg("robot"),
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
-        }
-    )
     joint_position = RewardTermCfg(
         func=wmdp.joint_position,
-        weight=-1.0,
+        weight=-2.0,
         params={
             "asset_cfg": SceneEntityCfg("robot"),
+        }
+    )
+    power = RewardTermCfg(
+        func=wmdp.power,
+        weight=-2.0e-3,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    )
+    feet_distance = RewardTermCfg(
+        func=wmdp.feet_distance,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"), "feet_distance_ref": 0.20}
+    )
+
+
+@configclass
+class PreRewardsCfg(RegularizationRewardsCfg):
+    survival = RewardTermCfg(
+        func=wmdp.survival,
+        weight=2.0,
+        params={},
+    )
+    approach_ball_lin_vel = RewardTermCfg(
+        func=kmdp.approach_ball_lin_vel_exp,
+        weight=8.0,
+        params={
+            "robot_asset_cfg": SceneEntityCfg("robot"),
+            "ball_asset_cfg": SceneEntityCfg("ball"),
+            "std": 0.5,
+            "distance_threshold": 0.0  # don't turn off upon reach
+        },
+    )
+    approach_ball_yaw = RewardTermCfg(
+        func=kmdp.approach_ball_ang_vel,
+        weight=4.0,
+        params={
+            "robot_asset_cfg": SceneEntityCfg("robot"),
+            "ball_asset_cfg": SceneEntityCfg("ball"),
+            "std": 0.25,
+            "distance_threshold": 0.50  # once reach within 0.25 meter, don't encourage aligning ball and robot
+        },
+    )
+    feet_swing = RewardTermCfg(
+        func=wmdp.feet_swing,
+        weight=3.0,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
+            "swing_period": 0.2,
         }
     )
     foot_slip = RewardTermCfg(
@@ -521,44 +627,21 @@ class WalkRewardCfg:
         weight=-10.0,
         params={},
     )
-    feet_distance = RewardTermCfg(
-        func=wmdp.feet_distance,
-        weight=-1.0,
-        params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"), "feet_distance_ref": 0.18}
+    feet_roll = RewardTermCfg(
+        func=wmdp.feet_roll,
+        weight=-0.4,
+        params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link")}
     )
 
 
 @configclass
-class RewardsCfg:
-    approach_ball_pos = RewardTermCfg(
-        func=kmdp.approach_ball_pos,
-        weight=40.0,
-        params={
-            "robot_asset_cfg": SceneEntityCfg("robot"),
-            "ball_asset_cfg": SceneEntityCfg("ball"),
-        },
-    )
-    approach_ball_lin_vel = RewardTermCfg(
-        func=kmdp.approach_ball_lin_vel,
-        weight=10.0,
-        params={
-            "robot_asset_cfg": SceneEntityCfg("robot"),
-            "ball_asset_cfg": SceneEntityCfg("ball"),
-        },
-    )
-    # # This makes the performance worse
-    # approach_ball_yaw = RewardTermCfg(
-    #     func=kmdp.approach_ball_yaw,
-    #     weight=5.0,
-    #     params={
-    #         "robot_asset_cfg": SceneEntityCfg("robot"),
-    #         "ball_asset_cfg": SceneEntityCfg("ball"),
-    #         "std": 0.5,
-    #     },
-    # )
+class KickRewardsCfg:
+# class KickRewardsCfg(RegularizationRewardsCfg):
+    """ Reward term for acquring basic walking gait
+    """
     standstill = RewardTermCfg(
         func=kmdp.standstill,
-        weight=4.0,
+        weight=5.0,
         params={
             "asset_cfg": SceneEntityCfg("robot"),
             "ball_asset_cfg": SceneEntityCfg("ball"),
@@ -567,7 +650,7 @@ class RewardsCfg:
     )
     ball_target = RewardTermCfg(
         func=kmdp.ball_target,
-        weight=50.0,
+        weight=50.0, # originally 50, 100 is too large, 70 also not great hmm
         params={
             "robot_asset_cfg": SceneEntityCfg("robot"),
             "ball_asset_cfg": SceneEntityCfg("ball"),
@@ -576,58 +659,58 @@ class RewardsCfg:
     )
     ball_vel = RewardTermCfg(
         func=kmdp.ball_velocity,
-        weight=5.0,
+        weight=20.0,
         params={
             "robot_asset_cfg": SceneEntityCfg("robot"),
             "ball_asset_cfg": SceneEntityCfg("ball"),
         },
     )
-    # # regularization reward
-    # action_smoothness = RewardTermCfg(
-    #     func=hmdp.action_rate1_reward,
-    #     weight=-1.0e-6
-    # )
-    # action_smoothness2 = RewardTermCfg(
-    #     func=hmdp.action_rate2_reward,
-    #     weight=-1.0e-5
-    # )
-    # joint_torques = RewardTermCfg(
-    #     func=hmdp.joint_torques,
-    #     weight=-1.0e-5,
-    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
-    # )  # penaltize large torques for all joints
-    # joint_pos_limits = RewardTermCfg(
-    #     func=hmdp.joint_position_limit_penalty,
-    #     weight=-10.0,
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot", joint_names=".*")
-    #     },
-    # )  # penalize joint limits
-    # joint_vel_penalty = RewardTermCfg(
-    #     func=hmdp.joint_velocity_penalty,
-    #     weight=-1.0e-1,
-    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
-    # )
-    # joint_accel_penalty = RewardTermCfg(
-    #     func=hmdp.joint_acceleration_penalty,
-    #     weight=-1.0e-3,
-    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
-    # )
-    # orientation_penalty = RewardTermCfg(
-    #     func=hmdp.base_orientation_penalty,
-    #     weight=-3.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot")},
-    # )
-    # base_height = RewardTermCfg(
-    #     func=hmdp.base_height_reward,
-    #     weight=2.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.70, "std": 0.25},
-    # )
+    # regularization reward
+    action_smoothness = RewardTermCfg(
+        func=bmdp.action_rate1_reward,
+        weight=-1.0e-6
+    )
+    action_smoothness2 = RewardTermCfg(
+        func=bmdp.action_rate2_reward,
+        weight=-1.0e-5
+    )
+    joint_torques = RewardTermCfg(
+        func=bmdp.joint_torques,
+        weight=-1.0e-5,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    )  # penaltize large torques for all joints
+    joint_pos_limits = RewardTermCfg(
+        func=bmdp.joint_position_limit_penalty,
+        weight=-10.0,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*")
+        },
+    )  # penalize joint limits
+    joint_vel_penalty = RewardTermCfg(
+        func=bmdp.joint_velocity_penalty,
+        weight=-1.0e-1,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    )
+    joint_accel_penalty = RewardTermCfg(
+        func=bmdp.joint_acceleration_penalty,
+        weight=-1.0e-3,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+    )
+    orientation_penalty = RewardTermCfg(
+        func=bmdp.base_orientation_penalty,
+        weight=-3.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    base_height = RewardTermCfg(
+        func=wmdp.base_height,
+        weight=2.0,
+        params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 0.68},
+    )
 
 
 @configclass
-class WholeBodyKick(HumanoidRLEnvCfg):
-    """Configuration for the locomotion velocity-tracking environment."""
+class WholeBodyPreKick(HumanoidRLEnvCfg):
+    """Configuration for the pretraining walking gait."""
 
     # Scene settings
     scene: WholeBodyCfg = WholeBodyCfg(num_envs=4096, env_spacing=2.5)
@@ -635,11 +718,11 @@ class WholeBodyKick(HumanoidRLEnvCfg):
     observations: ObservationsCfg = ObservationsCfg()
     # actions: ActionsCfg = ActionsCfg()
     actions: ActionsCfg = ActionsCfg()
-    commands: CommandsCfg = CommandsCfg()
+    commands: PreCommandsCfg = PreCommandsCfg()
     # MDP settings
-    rewards: RewardsCfg = RewardsCfg()
-    terminations: TerminationsCfg = TerminationsCfg()
-    events: EventCfg = EventCfg()
+    rewards: PreRewardsCfg = PreRewardsCfg()
+    terminations: PreTerminationsCfg = PreTerminationsCfg()
+    events: PreEventCfg = PreEventCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
 
     # Viewer
@@ -681,13 +764,37 @@ class WholeBodyKick(HumanoidRLEnvCfg):
 # from .walking_env_config import ObservationsCfg as WalkObservationsCfg
 
 @configclass
-class LowerBodyKick(WholeBodyKick):
+class LowerBodyPreKick(WholeBodyPreKick):
+    """Configuration for the pretraining walking gait."""
     scene: LowerBodyCfg = LowerBodyCfg(num_envs=4096, env_spacing=2.5)
-    rewards: WalkRewardCfg = WalkRewardCfg()
 
 
 @configclass
-class LowerBodyRunKick(WholeBodyKick):
+class LowerBodyKick(WholeBodyPreKick):
+    """Configuration for the training kick skill."""
     scene: LowerBodyCfg = LowerBodyCfg(num_envs=4096, env_spacing=2.5)
-    rewards: RewardsCfg = RewardsCfg() # First test: just use the original reward
+    rewards: KickRewardsCfg = KickRewardsCfg()
     events: KickEventCfg = KickEventCfg()
+    commands: KickCommandsCfg = KickCommandsCfg()
+
+
+@configclass
+class LowerBodyPreKickPriv(WholeBodyPreKick):
+    """Configuration for the pretraining walking gait with privileged info."""
+    scene: LowerBodyCfg = LowerBodyCfg(num_envs=4096, env_spacing=2.5)
+    observations: ObservationPrivCfg = ObservationPrivCfg()
+
+
+@configclass
+class LowerBodyKickPriv(WholeBodyPreKick):
+    """Configuration for the training kick skill with privileged info."""
+    scene: LowerBodyCfg = LowerBodyCfg(num_envs=4096, env_spacing=2.5)
+    observations: ObservationPrivCfg = ObservationPrivCfg()
+    rewards: KickRewardsCfg = KickRewardsCfg()
+    events: KickEventCfg = KickEventCfg()
+    commands: KickCommandsCfg = KickCommandsCfg()
+    only_positive_rewards: bool = False
+    def __post_init__(self):
+        """Post initialization."""
+        super().__post_init__()
+        self.episode_length_s = 4.0

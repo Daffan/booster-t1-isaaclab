@@ -12,9 +12,11 @@ from typing import TYPE_CHECKING
 from isaaclab.assets import Articulation
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils.math import sample_uniform
+from isaaclab.utils import math as math_utils
 
 if TYPE_CHECKING:
     from isaaclab.humanoid_tasks.envs import HumanoidRLEnvCfg, HumanoidRLEnv
+    from isaaclab.assets import RigidObject
 
 
 def reset_joints_around_default(
@@ -50,3 +52,37 @@ def reset_joints_around_default(
     joint_vel = sample_uniform(joint_min_vel, joint_max_vel, joint_min_vel.shape, joint_min_vel.device)
     # set into the physics simulation
     asset.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
+
+def apply_external_force_torque(
+    env: HumanoidRLEnv,
+    env_ids: torch.Tensor,
+    force_range: tuple[float, float],
+    torque_range: tuple[float, float],
+    p: float = 0.2,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+):
+    """Randomize the external forces and torques applied to the bodies.
+
+    This function creates a set of random forces and torques sampled from the given ranges. The number of forces
+    and torques is equal to the number of bodies times the number of environments. The forces and torques are
+    applied to the bodies by calling ``asset.set_external_force_and_torque``. The forces and torques are only
+    applied when ``asset.write_data_to_sim()`` is called in the environment. P is the probability of applying the push
+    """
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject | Articulation = env.scene[asset_cfg.name]
+    # resolve environment ids
+    if env_ids is None:
+        env_ids = torch.arange(env.scene.num_envs, device=asset.device)
+    # resolve number of bodies
+    num_bodies = len(asset_cfg.body_ids) if isinstance(asset_cfg.body_ids, list) else asset.num_bodies
+
+    # sample random forces and torques
+    size = (len(env_ids), num_bodies, 3)
+    forces = math_utils.sample_uniform(*force_range, size, asset.device)
+    torques = math_utils.sample_uniform(*torque_range, size, asset.device)
+    # set the forces and torques into the buffers
+    # note: these are only applied when you call: `asset.write_data_to_sim()`
+    if torch.rand(1, device=asset.device) < p:
+        asset.set_external_force_and_torque(forces, torques, env_ids=env_ids, body_ids=asset_cfg.body_ids)
+    else:
+        asset.set_external_force_and_torque(torch.zeros_like(forces), torch.zeros_like(torques), env_ids=env_ids, body_ids=asset_cfg.body_ids)

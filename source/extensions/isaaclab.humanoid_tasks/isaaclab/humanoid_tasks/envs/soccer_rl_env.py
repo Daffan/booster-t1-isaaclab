@@ -20,6 +20,7 @@ class SoccerRLEnv(ManagerBasedRLEnv):
     def __init__(self, cfg: SoccerRLEnvCfg, render_mode: str | None = None, **kwargs):
         super(SoccerRLEnv, self).__init__(cfg, render_mode, **kwargs)
         self.phase_time = torch.zeros(self.num_envs, device=self.device)
+        self.action_histories = deque(maxlen=3)
         self.rel_robot_ball_pos = torch.zeros((self.num_envs, 2, 2), device=self.device)
         self.rel_ball_target_pos = torch.zeros((self.num_envs, 2, 2), device=self.device)
 
@@ -39,6 +40,7 @@ class SoccerRLEnv(ManagerBasedRLEnv):
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         super().step(action)
         self.phase_time = torch.fmod(self.phase_time + self.step_dt / self.cfg.phase_freq, 1.0)
+        self.action_histories.append(action.clone())
 
         r_asset: Articulation = self.scene["robot"]
         b_asset: RigidObject = self.scene["ball"]

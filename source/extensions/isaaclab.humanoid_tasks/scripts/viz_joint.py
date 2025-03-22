@@ -23,13 +23,7 @@ parser.add_argument(
 )
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument("--viz_joints", action="store_true", default=False, help="Visualize joint.")
 parser.add_argument("--viewer_scale", type=float, default=2.0, help="Viewer scale.")
-
-parser.add_argument("--vel_x", type=float, default=1.0, help="X linear velocity.")
-parser.add_argument("--vel_y", type=float, default=0.0, help="Y linear velocity.")
-parser.add_argument("--vel_ang", type=float, default=1.0, help="Angular velocity.")
-parser.add_argument("--gait_freq", type=float, default=1.5, help="Frequency.")
 
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
@@ -86,27 +80,15 @@ def main():
     )
     env_cfg.viewer.env_index = 0
     env_cfg.viewer.eye=(12.5/args_cli.viewer_scale, 12.5/args_cli.viewer_scale, 7.5/args_cli.viewer_scale)
-
-    if hasattr(env_cfg.commands, "base_velocity"):
-        env_cfg.commands.base_velocity.ranges.lin_vel_x = (args_cli.vel_x, args_cli.vel_x)
-        env_cfg.commands.base_velocity.ranges.lin_vel_y = (args_cli.vel_y, args_cli.vel_y)
-        env_cfg.commands.base_velocity.ranges.ang_vel_z = (args_cli.vel_ang, args_cli.vel_ang)
-        env_cfg.commands.base_velocity.ranges.gait_frequency = (args_cli.gait_freq, args_cli.gait_freq)
-    agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
-
-    # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
-    log_root_path = os.path.abspath(log_root_path)
-    print(f"[INFO] Loading experiment from directory: {log_root_path}")
-    resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
-    log_dir = os.path.dirname(resume_path)
+    env_cfg.events.randomize_joint_parameters = None
+    env_cfg.scene.robot.spawn.articulation_props.fix_root_link = True  # fix root link to avoid falling
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
     # # wrap for video recording
     import time
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    test_result_dir = os.path.join(log_dir, "videos", timestamp)
+    test_result_dir = os.path.join("debug", "videos", timestamp)
     if args_cli.video:
         video_kwargs = {
             "video_folder": test_result_dir,
@@ -126,77 +108,56 @@ def main():
     env = RslRlVecEnvWrapper(env)
     action_dim = env.action_space.shape[1]
 
-    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-    # load previously trained model
-    # ppo_runner = ROARunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    ppo_runner.load(resume_path)
 
-    # obtain the trained policy for inference
-    policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
-
-    # export policy to onnx/jit
-    # export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    # export_policy_as_jit(
-    #     ppo_runner.alg.actor_critic, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt"
-    # )
-    # export_policy_as_onnx(
-    #     ppo_runner.alg.actor_critic, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
-    # )
-
-    # record the dof pos
-    if True:
-        dof_targets = []
-        dof_limits = env.env.env.env.scene["robot"].data.soft_joint_pos_limits.detach().cpu().numpy()[0, ...]
-        dof_pos_list = []
-        contacts = []
-        obss = []
 
     # reset environment
     obs, _ = env.get_observations()
     timestep = 0
-    robot_asset: Articulation = env.env.env.env.scene["robot"]
+    robot_asset: Articulation = env.unwrapped.scene["robot"]
     joint_names = robot_asset.data.joint_names
     T = int(args_cli.video_length / action_dim)
+
+    # record the dof pos
+    if True:
+        dof_targets = []
+        dof_limits = robot_asset.data.soft_joint_pos_limits.detach().cpu().numpy()[0, ...]
+        dof_pos_list = []
+        contacts = []
+        obss = []
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
-            # agent stepping
-            actions = policy(obs)
-            
-            # debug
-            if args_cli.viz_joints:
-                actions = torch.zeros_like(actions)
-                joint_id = min(timestep // T, len(joint_names) - 1)
-                if timestep % T == 0:
-                    print(f"Joint {joint_names[joint_id]}")
-                actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
-            dof_targets.append(actions[0, :].detach().cpu().numpy())
+            actions = torch.zeros((1, action_dim), device=env.device)
+            joint_id = min(timestep // T, len(joint_names) - 1)
+            if timestep % T == 0:
+                print(f"Joint {joint_names[joint_id]}")
+            actions[:, joint_id] = 0.5 * 4 * torch.sin(torch.tensor([timestep % T / T * 2 * np.pi]))
 
             # env stepping
             obs, rews, dones, infos = env.step(actions)
             # contacts.append(env.env.env.env.scene.sensors["contact_forces"].data.net_forces_w[0, [17, 23], 2].detach().cpu().numpy())
-            dof_pos_list.append(robot_asset.data.joint_pos[0, :].detach().cpu().numpy())
+            dof_pos_list.append(obs[0, -36:-24].detach().cpu().numpy())
+            dof_targets.append(robot_asset.data.joint_pos_target[0, :].detach().cpu().numpy())
             obss.append(obs[0, :].detach().cpu().numpy())
             # height
             # print(f"Height: {robot_asset.data.root_pos_w[0, 2].detach().cpu().numpy()}")
+        timestep += 1
         if args_cli.video:
             # print(float(timestep) / args_cli.video_length)
-            timestep += 1
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
 
     # plot dof pos
     import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(5, 5, figsize=(20, 12))
+    fig, axs = plt.subplots(4, 6, figsize=(32, 12))
     dof_targets = np.stack(dof_targets)
     # dof_pos = torch.stack(dof_pos, dim=1).detach().cpu().numpy().T
     dof_pos = np.stack(dof_pos_list)
     dim = min(25, action_dim)
     for i in range(dim):
-        ax = axs[i//5, i%5]
+        ax = axs[i//6, i%6]
         ax.plot(dof_targets[:, i], label='target')
         ax.plot(dof_pos[:, i], label='pos')
         # horizontal line for dof limits

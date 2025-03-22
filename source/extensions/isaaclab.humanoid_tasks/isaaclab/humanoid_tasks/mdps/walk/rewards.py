@@ -97,6 +97,7 @@ def torque_tiredness(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, threshold=0.
     asset: Articulation = env.scene[asset_cfg.name]
     torque_limits = asset.data.torque_limits
     torques = asset.data.applied_torque
+    import ipdb; ipdb.set_trace()
     return torch.sum(torch.square(torques / torque_limits).clip(max=1.0), dim=-1)
 
 def power(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
@@ -250,3 +251,8 @@ def standstill(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg, sensor_cfg: SceneE
     is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > 0.01
     # encourage both feet making contact with the ground
     return is_contact.all(dim=-1) * (gait_frequency < 1.0e-8)
+
+def feet_action(env: HumanoidRLEnv) -> torch.Tensor:
+    """Reward for minimizing the foot action."""
+    feet_action = env.action_manager.action[:, -2:]
+    return torch.sum(torch.square(feet_action), dim=-1)

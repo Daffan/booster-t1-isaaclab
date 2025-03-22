@@ -45,6 +45,9 @@ class OnPolicyRunner:
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
         self.empirical_normalization = self.cfg["empirical_normalization"]
+        self.load_critic = self.cfg.get("load_critic", True)
+        self.load_optimizer = self.cfg.get("load_optimizer", True)
+
         if self.empirical_normalization:
             self.obs_normalizer = EmpiricalNormalization(shape=[num_obs], until=1.0e8).to(self.device)
             self.critic_obs_normalizer = EmpiricalNormalization(shape=[num_critic_obs], until=1.0e8).to(self.device)
@@ -90,6 +93,12 @@ class OnPolicyRunner:
             else:
                 raise AssertionError("logger type not found")
 
+        actions = torch.zeros(
+            (self.env.num_envs, self.env.num_actions), dtype=torch.float, device=self.device
+        )
+        obs, rewards, dones, infos = self.env.step(actions)
+        self.env.reset()
+
         if init_at_random_ep_len:
             self.env.episode_length_buf = torch.randint_like(
                 self.env.episode_length_buf, high=int(self.env.max_episode_length)
@@ -101,8 +110,10 @@ class OnPolicyRunner:
 
         ep_infos = []
         rewbuffer = deque(maxlen=100)
+        discountrewbuffer = deque(maxlen=100)
         lenbuffer = deque(maxlen=100)
         cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+        dis_cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
         cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
 
         start_iter = self.current_learning_iteration
@@ -112,7 +123,11 @@ class OnPolicyRunner:
             # Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs, critic_obs)
+                    try:
+                        actions = self.alg.act(obs, critic_obs)
+                    except:
+                        print(f"obs: {obs}")
+                        print(f"critic_obs: {critic_obs}")
                     obs, rewards, dones, infos = self.env.step(actions)
                     obs = self.obs_normalizer(obs)
                     if "critic" in infos["observations"]:
@@ -136,11 +151,14 @@ class OnPolicyRunner:
                         elif "log" in infos:
                             ep_infos.append(infos["log"])
                         cur_reward_sum += rewards
+                        dis_cur_reward_sum = self.alg.gamma * dis_cur_reward_sum + rewards
                         cur_episode_length += 1
                         new_ids = (dones > 0).nonzero(as_tuple=False)
                         rewbuffer.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
+                        discountrewbuffer.extend(dis_cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
                         lenbuffer.extend(cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
                         cur_reward_sum[new_ids] = 0
+                        dis_cur_reward_sum[new_ids] = 0
                         cur_episode_length[new_ids] = 0
 
                 stop = time.time()
@@ -150,7 +168,14 @@ class OnPolicyRunner:
                 start = stop
                 self.alg.compute_returns(critic_obs)
 
-            mean_value_loss, mean_surrogate_loss, mean_bound_loss = self.alg.update()
+            if (it - start_iter) <= 100:
+                mean_value_loss, mean_surrogate_loss, mean_bound_loss = 0, 0, 0
+                self.alg.storage.clear()
+            elif (it - start_iter) <= 200:
+                mean_value_loss, mean_surrogate_loss, mean_bound_loss = self.alg.update_value()
+            else:
+                mean_value_loss, mean_surrogate_loss, mean_bound_loss = self.alg.update()
+            print(mean_value_loss, mean_surrogate_loss, mean_bound_loss)
             stop = time.time()
             learn_time = stop - start
             self.current_learning_iteration = it
@@ -232,6 +257,7 @@ class OnPolicyRunner:
                 f"""{'Bound loss:':>{pad}} {locs['mean_bound_loss']:.4f}\n"""
                 f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
                 f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.3e}\n"""
+                f"""{'Mean discounted reward:':>{pad}} {statistics.mean(locs['discountrewbuffer']):.3e}\n"""
                 f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n"""
             )
             #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
@@ -277,14 +303,24 @@ class OnPolicyRunner:
         if self.logger_type in ["neptune", "wandb"]:
             self.writer.save_model(path, self.current_learning_iteration)
 
-    def load(self, path, load_optimizer=True):
+    def load(self, path):
         loaded_dict = torch.load(path)
-        self.alg.actor_critic.load_state_dict(loaded_dict["model_state_dict"])
+        if self.load_critic:
+            self.alg.actor_critic.load_state_dict(loaded_dict["model_state_dict"])
+        else:
+            print("Skipping loading critic weights")
+            loaded_dict_new = {}
+            for k, v in loaded_dict["model_state_dict"].items():
+                if "critic" not in k:
+                    loaded_dict_new[k] = v
+            self.alg.actor_critic.load_state_dict(loaded_dict_new, strict=False)
         if self.empirical_normalization:
             self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
             self.critic_obs_normalizer.load_state_dict(loaded_dict["critic_obs_norm_state_dict"])
-        if load_optimizer:
+        if self.load_optimizer:
             self.alg.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
+        else:
+            print("Skipping loading optimizer weights")
         self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
 

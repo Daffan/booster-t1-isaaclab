@@ -53,7 +53,7 @@ import numpy as np
 
 from rsl_rl.runners import OnPolicyRunner
 
-from isaaclab.humanoid_tasks.learning.runners import OnPolicyRunner
+from isaaclab.humanoid_tasks.learning.runners import ROARunner as OnPolicyRunner
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -87,11 +87,14 @@ def main():
     env_cfg.viewer.env_index = 0
     env_cfg.viewer.eye=(12.5/args_cli.viewer_scale, 12.5/args_cli.viewer_scale, 7.5/args_cli.viewer_scale)
 
+    env_cfg.events.randomize_joint_parameters = None
+
     if hasattr(env_cfg.commands, "base_velocity"):
         env_cfg.commands.base_velocity.ranges.lin_vel_x = (args_cli.vel_x, args_cli.vel_x)
         env_cfg.commands.base_velocity.ranges.lin_vel_y = (args_cli.vel_y, args_cli.vel_y)
         env_cfg.commands.base_velocity.ranges.ang_vel_z = (args_cli.vel_ang, args_cli.vel_ang)
         env_cfg.commands.base_velocity.ranges.gait_frequency = (args_cli.gait_freq, args_cli.gait_freq)
+    env_cfg.curriculum = None
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
     # specify directory for logging experiments
@@ -136,7 +139,11 @@ def main():
     policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
 
     # export policy to onnx/jit
-    # export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+    script_module = torch.jit.script(ppo_runner.alg.actor_critic.actor)
+    os.makedirs(export_model_dir, exist_ok=True)
+    script_module.save(os.path.join(export_model_dir, "policy.pt"))
+    print(f"[INFO] Exported policy to {os.path.join(export_model_dir, 'policy.pt')}")
     # export_policy_as_jit(
     #     ppo_runner.alg.actor_critic, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt"
     # )
@@ -164,7 +171,6 @@ def main():
         with torch.inference_mode():
             # agent stepping
             actions = policy(obs)
-            
             # debug
             if args_cli.viz_joints:
                 actions = torch.zeros_like(actions)
@@ -176,6 +182,7 @@ def main():
 
             # env stepping
             obs, rews, dones, infos = env.step(actions)
+            # print(f"Step: {timestep}, Reward: {rews[0]}, Done: {dones[0]}")
             # contacts.append(env.env.env.env.scene.sensors["contact_forces"].data.net_forces_w[0, [17, 23], 2].detach().cpu().numpy())
             dof_pos_list.append(robot_asset.data.joint_pos[0, :].detach().cpu().numpy())
             obss.append(obs[0, :].detach().cpu().numpy())

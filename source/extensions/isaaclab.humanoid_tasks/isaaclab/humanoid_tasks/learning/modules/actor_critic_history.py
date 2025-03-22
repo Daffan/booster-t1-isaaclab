@@ -134,13 +134,20 @@ class Actor(nn.Module):
                 actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], actor_hidden_dims[layer_index + 1]))
                 actor_layers.append(activation)
         self.actor = nn.Sequential(*actor_layers)
+
+        # for JIT export
+        self.register_buffer("gym2lab_mapping", torch.tensor([0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11], dtype=torch.long))
+        self.register_buffer("lab2gym_mapping", torch.tensor([i for i in range(12)], dtype=torch.long))
+
     
-    def forward(self, obs, hist_encoding=False):
+    def forward(self, obs: torch.Tensor, hist_encoding: bool = False) -> torch.Tensor:
         obs_prop = obs[:, :self.num_prop]
+
         if hist_encoding:
             latent = self.infer_hist_latent(obs)
         else:
             latent = self.infer_priv_latent(obs)
+
         actor_input = torch.cat([obs_prop, latent], dim=1)
         return self.actor(actor_input)
     
@@ -157,6 +164,22 @@ class Actor(nn.Module):
         latent = self.infer_hist_latent(obs)
         actor_input = torch.cat([obs[:, -1], latent], dim=1)
         return self.actor(actor_input)
+
+    @torch.jit.export
+    def act_real(self, obs: torch.Tensor) -> torch.Tensor:
+        # (batch_size, history_length, num_prop)
+        obs = torch.cat(
+            (
+                obs[..., :12-1],
+                obs[..., 12-1:24-1].index_select(-1, self.gym2lab_mapping),
+                obs[..., 24-1:36-1].index_select(-1, self.gym2lab_mapping),
+                obs[..., 36-1:48-1].index_select(-1, self.gym2lab_mapping)
+            ),
+            dim=-1,
+        )
+        latent = self.infer_hist_latent(obs)
+        actor_input = torch.cat([obs[:, -1], latent], dim=1)
+        return self.actor(actor_input).index_select(-1, self.lab2gym_mapping)
 
 class ActorCriticHistory(nn.Module):
     is_recurrent = False
@@ -250,7 +273,7 @@ class ActorCriticHistory(nn.Module):
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
-    def act_inference(self, observations, hist_encoding=False):
+    def act_inference(self, observations, hist_encoding=True):
         actions_mean = self.actor(observations, hist_encoding)
         return actions_mean
 

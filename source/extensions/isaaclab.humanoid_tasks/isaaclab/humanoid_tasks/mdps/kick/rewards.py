@@ -90,7 +90,7 @@ def standstill(env: SoccerRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: Scen
     is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > 0.01
     ball_root_vel = b_asset.data.root_lin_vel_w[:, :2]
     # encourage both feet making contact with the ground
-    return is_contact.all(dim=-1) * (torch.norm(ball_root_vel, dim=-1) > 0.01)
+    return is_contact.all(dim=-1) * (torch.norm(ball_root_vel, dim=-1) > 0.1) * (env.episode_length_buf > 40)  # only apply after 40 steps or when the ball is moving
 
 def feet_swing(env: SoccerRLEnv, asset_cfg: SceneEntityCfg, ball_asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg, swing_period: float=0.2) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
@@ -133,7 +133,7 @@ def approach_ball_ang_vel(
         std: float = 0.5,
         distance_threshold: float=0.25
     ) -> torch.Tensor:
-    """Encourage the robot to face the ball"""
+    """Encourage the robot to face to the ball"""
     r_asset: Articulation = env.scene[robot_asset_cfg.name]
     b_asset: RigidObject = env.scene[ball_asset_cfg.name]
     # ball position in the robot frame
@@ -141,7 +141,6 @@ def approach_ball_ang_vel(
     ball_yaw = torch.atan2(ball_pos_w[:, 1], ball_pos_w[:, 0])
     flipped_ball_yaw1 = ball_yaw + 2 * torch.pi
     flipped_ball_yaw2 = ball_yaw - 2 * torch.pi
-    ball_root_vel_norm = torch.norm(b_asset.data.root_lin_vel_w[:, :2], dim=-1)
 
     ball_yaw_all = torch.stack([ball_yaw, flipped_ball_yaw1, flipped_ball_yaw2], dim=-1)
     yaw_diff_select = torch.argmin(torch.abs(ball_yaw_all - r_asset.data.heading_w.unsqueeze(-1)), dim=-1)
@@ -155,11 +154,6 @@ def approach_ball_ang_vel(
     yaw_speed_curr = r_asset.data.root_ang_vel_w[:, 2]
     yaw_speed_error = yaw_speed_target - yaw_speed_curr
     
-    # if torch.abs(yaw_diff).item() < 0.1:
-    #     import ipdb; ipdb.set_trace()
-
-    # print(yaw_diff.item(), ball_yaw.item(), yaw_speed_target.item(), yaw_speed_curr.item(), yaw_speed_error.item())
-    # print(torch.exp(-torch.square(yaw_speed_error) / std))
     return torch.exp(-torch.square(yaw_speed_error) / std) * (torch.norm(ball_pos_w[:, :2], dim=-1) > distance_threshold) # * (ball_root_vel_norm < 0.01)
 
 def ball_target(
@@ -175,12 +169,9 @@ def ball_target(
     # command should be uniform 2D pose
     goal_pos = g_asset.data.root_pos_w[:, :2]
     rel_pos_w = goal_pos - b_asset.data.root_pos_w[:, :2]
-    if "rel_ball_target_pos" in env.last_step_values:
-        rel_pos_w_prev = env.last_step_values["rel_ball_target_pos"]
-        delta_distance = torch.norm(rel_pos_w, dim=-1) - torch.norm(rel_pos_w_prev, dim=-1)
-    else:
-        delta_distance = torch.zeros_like(torch.norm(rel_pos_w, dim=-1))
-    env.last_step_values["rel_ball_target_pos"] = rel_pos_w
+    rel_pos_w_prev = env.rel_ball_target_pos[:, 0]
+    delta_distance = torch.norm(rel_pos_w, dim=-1) - torch.norm(rel_pos_w_prev, dim=-1)
+    delta_distance[torch.norm(rel_pos_w_prev[:, 0], dim=-1) == 0] = 0  # zeros mean no history
 
     # change of ball position is not discouraged
     return torch.clamp(-delta_distance, min=0)

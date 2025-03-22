@@ -18,13 +18,14 @@ class T1BoosterWalkROAPPORunnerCfg(T1PPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.max_iterations = 20000
+        self.max_iterations = 40000
 
         self.experiment_name = "roa_ppo"
 
         self.policy.class_name = "ActorCriticHistory"
-        self.policy.actor_hidden_dims = [256, 128, 128]
-        self.policy.critic_hidden_dims = [256, 256, 128]
+        self.policy.actor_hidden_dims = [512, 256, 128]
+        self.policy.critic_hidden_dims = [512, 256, 128]
+        # self.policy.priv_encoder_dims = [128, 64, 20]
 
         self.algorithm.class_name = "ROAPPO"
         self.algorithm.value_loss_coef = 1.0
@@ -33,6 +34,6 @@ class T1BoosterWalkROAPPORunnerCfg(T1PPORunnerCfg):
         self.algorithm.entropy_coef = 0.01
 
         # ROA related
-        self.algorithm.priv_reg_coef_schedual = [0, 0.1, 1000, 4000]
+        self.algorithm.priv_reg_coef_schedual = [0, 0.1, 3000, 6000]
         self.adaptation_update_freq = 20
-        self.dagger_update_start_iter = 6000
+        self.dagger_update_start_iter = 10000

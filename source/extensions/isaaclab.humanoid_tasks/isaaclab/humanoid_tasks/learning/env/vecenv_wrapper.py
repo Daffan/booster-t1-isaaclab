@@ -57,6 +57,9 @@ class RslRlVecEnvWrapper(IsaaclabRslRlVecEnvWrapper):
         else:
             obs = obs_dict["policy"]
             num_priv, num_hist, num_prop = 0, 0, 0
+            if "privilege" in obs_dict:
+                privilege = obs_dict["privilege"]
+                obs_dict["critic"] = torch.cat([obs, privilege], dim=-1)
 
         num_obs = obs.shape[-1]
         num_critic_obs = obs_dict["critic"].shape[-1] if "critic" in obs_dict else num_obs

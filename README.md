@@ -14,6 +14,10 @@ python deploy_hist.py --config T1_hist.yaml
 ```
 Check deploy README for more details: `deploy/README.md`.
 
+The video of real-world deployment can be found here: `videos/isaaclab_deploy.MOV`.
+
+Please refer to original `booster_gym` for training a deployable policy in IsaacGym: `https://github.com/BoosterRobotics/booster_gym.git`. This repo is adapted from `booster_gym`, but I have not check if any part is broken.
+
 # Booster Gym
 
 Booster Gym is a reinforcement learning (RL) framework designed for humanoid robot locomotion developed by [Booster Robotics](https://boosterobotics.com/).

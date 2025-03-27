@@ -20,8 +20,6 @@ class T1BoosterWalkROAPPORunnerCfg(T1PPORunnerCfg):
 
         self.max_iterations = 40000
 
-        self.experiment_name = "roa_ppo"
-
         self.policy.class_name = "ActorCriticHistory"
         # self.policy.actor_hidden_dims = [512, 256, 128]
         # self.policy.critic_hidden_dims = [512, 256, 128]

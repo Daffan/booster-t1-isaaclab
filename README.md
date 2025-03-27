@@ -10,4 +10,9 @@ To play this model:
 ./isaaclab.sh -p source/extensions/isaaclab.humanoid_tasks/scripts/play_roa.py --task Booster-T1-lb-ROA-walk-v1 --headless --video --load_run 2025-03-23_16-31-50
 ```
 
+To reproduce this training,
+```
+./isaaclab.sh -p source/extensions/isaaclab.humanoid_tasks/scripts/train_roa.py --task Booster-T1-lb-ROA-walk-v1 --headless --video
+```
+
 Please refer to `deploy` branch for MuJoCo and real-world transfer script.

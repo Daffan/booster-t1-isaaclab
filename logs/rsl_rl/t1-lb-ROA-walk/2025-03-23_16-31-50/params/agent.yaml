@@ -1,0 +1,48 @@
+seed: 42
+device: cuda:2
+num_steps_per_env: 24
+max_iterations: 40000
+empirical_normalization: false
+policy:
+  class_name: ActorCriticHistory
+  init_noise_std: 1.0
+  actor_hidden_dims:
+  - 256
+  - 128
+  - 128
+  critic_hidden_dims:
+  - 256
+  - 256
+  - 128
+  activation: elu
+algorithm:
+  class_name: ROAPPO
+  value_loss_coef: 1.0
+  use_clipped_value_loss: true
+  clip_param: 0.2
+  entropy_coef: 0.01
+  num_learning_epochs: 5
+  num_mini_batches: 4
+  learning_rate: 0.0005
+  schedule: adaptive
+  gamma: 0.99
+  lam: 0.95
+  desired_kl: 0.01
+  max_grad_norm: 1.0
+  priv_reg_coef_schedual:
+  - 0
+  - 0.1
+  - 3000
+  - 6000
+clip_actions: null
+save_interval: 500
+experiment_name: roa_ppo
+run_name: ''
+logger: wandb
+neptune_project: isaaclab
+wandb_project: RL-Booster
+resume: false
+load_run: .*
+load_checkpoint: model_.*.pt
+adaptation_update_freq: 20
+dagger_update_start_iter: 10000

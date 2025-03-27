@@ -1,0 +1,303 @@
+--- git status ---
+On branch debug_gym_setting
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/envs/humanoid_rl_env.py
+	modified:   source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/modules/actor_critic_history.py
+	modified:   source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/runners/roa_runner.py
+	modified:   source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/mdps/walk/rewards.py
+	modified:   source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/robots/t1.py
+	modified:   source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/roa_ppo_config.py
+	modified:   source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/walk_env_config.py
+
+no changes added to commit (use "git add" and/or "git commit -a") 
+
+
+--- git diff ---
+diff --git a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/envs/humanoid_rl_env.py b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/envs/humanoid_rl_env.py
+index 8872483..d0866bf 100644
+--- a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/envs/humanoid_rl_env.py
++++ b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/envs/humanoid_rl_env.py
+@@ -35,7 +35,7 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
+ 
+     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
+         super().step(action)
+-        self.action_histories.append(action.clone())
++        self.action_histories.append(action.clone())  # consider using action after clipping
+         self.phase_time = torch.fmod(self.phase_time + self.step_dt / self.cfg.phase_freq, 1.0)
+         if self.cfg.only_positive_rewards:
+             self.reward_buf = torch.clamp(self.reward_buf, min=0.0)
+diff --git a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/modules/actor_critic_history.py b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/modules/actor_critic_history.py
+index ad3f035..f4e67a7 100644
+--- a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/modules/actor_critic_history.py
++++ b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/modules/actor_critic_history.py
+@@ -190,7 +190,7 @@ class ActorCriticHistory(nn.Module):
+                         critic_hidden_dims=[256, 256, 256],
+                         priv_encoder_dims=[64, 20],
+                         activation='elu',
+-                        init_std=1.0,
++                        init_std=-2.0,
+                         **kwargs):
+         # if kwargs:
+         #     print("ActorCritic.__init__ got unexpected arguments, which will be ignored: " + str([key for key in kwargs.keys()]))
+@@ -229,7 +229,7 @@ class ActorCriticHistory(nn.Module):
+         print(f"Critic MLP: {self.critic}")
+ 
+         # Action noise
+-        self.std = nn.Parameter(torch.tensor(init_std))
++        self.logstd = torch.nn.parameter.Parameter(torch.full((1, num_actions), fill_value=init_std), requires_grad=True)
+         self.distribution = None
+         # disable args validation for speedup
+         Normal.set_default_validate_args = False
+@@ -264,7 +264,7 @@ class ActorCriticHistory(nn.Module):
+ 
+     def update_distribution(self, observations, hist_encoding=False):
+         mean = self.actor(observations, hist_encoding)
+-        self.distribution = Normal(mean, mean*0. + self.std)
++        self.distribution = Normal(mean, mean*0. + torch.exp(self.logstd).expand_as(mean))
+ 
+     def act(self, observations, hist_encoding=False, **kwargs):
+         self.update_distribution(observations, hist_encoding)
+diff --git a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/runners/roa_runner.py b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/runners/roa_runner.py
+index e161fbf..1e98ed4 100644
+--- a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/runners/roa_runner.py
++++ b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/learning/runners/roa_runner.py
+@@ -216,7 +216,7 @@ class OnPolicyRunner:
+                 else:
+                     self.writer.add_scalar("Episode/" + key, value, locs["it"])
+                     ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
+-        mean_std = self.alg.actor_critic.std.mean()
++        mean_std = self.alg.actor_critic.logstd.exp().mean()
+         fps = int(self.num_steps_per_env * self.env.num_envs / (locs["collection_time"] + locs["learn_time"]))
+ 
+         if locs["adaptation_update"]:
+diff --git a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/mdps/walk/rewards.py b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/mdps/walk/rewards.py
+index eae0dfe..29ab4f0 100644
+--- a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/mdps/walk/rewards.py
++++ b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/mdps/walk/rewards.py
+@@ -135,7 +135,7 @@ def root_acc(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+ 
+ def action_rate(env: HumanoidRLEnv) -> torch.Tensor:
+     """Penalize large instantaneous changes in the network action output"""
+-    return torch.linalg.norm((env.action_manager.action - env.action_manager.prev_action), dim=1) ** 2
++    return torch.linalg.norm((env.action_manager.action.clip(-1.0, 1.0) - env.action_manager.prev_action.clip(-1.0, 1.0)), dim=1) ** 2
+ 
+ def dof_pos_limits(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+     """Penalize joint position limits on the articulation."""
+diff --git a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/robots/t1.py b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/robots/t1.py
+index 7c03381..ae0154b 100644
+--- a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/robots/t1.py
++++ b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/robots/t1.py
+@@ -84,10 +84,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
+             ],
+             stiffness=200,
+             damping=5,
+-            # effort_limit=45,
++            effort_limit=45,
+             max_delay=10,
+             min_delay=0,
+-            armature=0.05,
++            armature=0.0,
+             friction=0.1
+         ),
+         "Hip_Roll_Yaw": DelayedPDActuatorCfg(
+@@ -99,10 +99,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
+             ],
+             stiffness=200,
+             damping=5,
+-            # effort_limit=30,
++            effort_limit=30,
+             max_delay=10,
+             min_delay=0,
+-            armature=0.05,
++            armature=0.0,
+             friction=0.1
+         ),
+         "Knee": DelayedPDActuatorCfg(
+@@ -112,10 +112,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
+             ],
+             stiffness=200,
+             damping=5,
+-            # effort_limit=60,
++            effort_limit=60,
+             max_delay=10,
+             min_delay=0,
+-            armature=0.05,
++            armature=0.0,
+             friction=0.1
+         ),
+         "Ankle_Pitch": DelayedPDActuatorCfg(
+@@ -125,10 +125,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
+             ],
+             stiffness=50,
+             damping=1,
+-            # effort_limit=24,
++            effort_limit=24,
+             max_delay=10,
+             min_delay=0,
+-            armature=0.05,
++            armature=0.0,
+             friction=0.1
+         ),
+         "Ankle_Roll": DelayedPDActuatorCfg(
+@@ -138,10 +138,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
+             ],
+             stiffness=50,
+             damping=1,
+-            # effort_limit=15,
++            effort_limit=15,
+             max_delay=10,
+             min_delay=0,
+-            armature=0.05,
++            armature=0.0,
+             friction=0.1
+         )
+     },
+diff --git a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/roa_ppo_config.py b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/roa_ppo_config.py
+index 782de48..b33f8c3 100644
+--- a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/roa_ppo_config.py
++++ b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/roa_ppo_config.py
+@@ -23,8 +23,10 @@ class T1BoosterWalkROAPPORunnerCfg(T1PPORunnerCfg):
+         self.experiment_name = "roa_ppo"
+ 
+         self.policy.class_name = "ActorCriticHistory"
+-        self.policy.actor_hidden_dims = [512, 256, 128]
+-        self.policy.critic_hidden_dims = [512, 256, 128]
++        # self.policy.actor_hidden_dims = [512, 256, 128]
++        # self.policy.critic_hidden_dims = [512, 256, 128]
++        self.policy.actor_hidden_dims = [256, 128, 128]
++        self.policy.critic_hidden_dims = [256, 256, 128]
+         # self.policy.priv_encoder_dims = [128, 64, 20]
+ 
+         self.algorithm.class_name = "ROAPPO"
+diff --git a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/walk_env_config.py b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/walk_env_config.py
+index b8f8669..45aa624 100644
+--- a/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/walk_env_config.py
++++ b/source/extensions/isaaclab.humanoid_tasks/isaaclab/humanoid_tasks/tasks/walk_env_config.py
+@@ -145,7 +145,7 @@ class ObservationsCfg:
+         joint_stiffness = ObsTerm(func=bmdp.joint_stiffness, params={"asset_cfg": SceneEntityCfg("robot")})
+         joint_damping = ObsTerm(func=bmdp.joint_damping, params={"asset_cfg": SceneEntityCfg("robot")})
+         joint_friction = ObsTerm(func=bmdp.joint_friction, params={"asset_cfg": SceneEntityCfg("robot")})
+-        joint_armature = ObsTerm(func=bmdp.joint_armature, params={"asset_cfg": SceneEntityCfg("robot")})
++        # joint_armature = ObsTerm(func=bmdp.joint_armature, params={"asset_cfg": SceneEntityCfg("robot")})
+ 
+     @configclass
+     class PolicyCfg(ObsGroup):
+@@ -273,8 +273,7 @@ class EventCfg:
+         mode="startup",
+         params={
+             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+-            "friction_distribution_params": (0.0, 0.1),
+-            "armature_distribution_params": (0.0, 0.05),
++            "friction_distribution_params": (0.0, 0.2),
+             "operation": "abs",
+             "distribution": "uniform",
+         },
+@@ -370,56 +369,56 @@ class TerminationsCfg:
+ @configclass
+ class CurriculumCfg:
+     """Curriculum terms for the MDP."""
+-    survival = CurrTerm(
+-        func=bmdp.modify_reward_weight,
+-        params={
+-            "term_name": "survival",
+-            "start_step": 1000,
+-            "num_steps": 3000,
+-            "start_weight": 2.0,
+-            "end_weight": 0.25
+-        },
+-    )
+-    tracking_lin_vel_x = CurrTerm(
+-        func=bmdp.modify_reward_weight,
+-        params={
+-            "term_name": "tracking_lin_vel_x",
+-            "start_step": 1000,
+-            "num_steps": 3000,
+-            "start_weight": 5.0,
+-            "end_weight": 1.0
+-        },
+-    )
+-    tracking_lin_vel_y = CurrTerm(
+-        func=bmdp.modify_reward_weight,
+-        params={
+-            "term_name": "tracking_lin_vel_y",
+-            "start_step": 1000,
+-            "num_steps": 3000,
+-            "start_weight": 5.0,
+-            "end_weight": 1.0
+-        },
+-    )
+-    tracking_ang_vel = CurrTerm(
+-        func=bmdp.modify_reward_weight,
+-        params={
+-            "term_name": "tracking_ang_vel",
+-            "start_step": 1000,
+-            "num_steps": 3000,
+-            "start_weight": 5.0,
+-            "end_weight": 0.5
+-        },
+-    )
+-    feet_swing = CurrTerm(
+-        func=bmdp.modify_reward_weight,
+-        params={
+-            "term_name": "feet_swing",
+-            "start_step": 1000,
+-            "num_steps": 3000,
+-            "start_weight": 6.0,
+-            "end_weight": 3.0
+-        },
+-    )
++    # survival = CurrTerm(
++    #     func=bmdp.modify_reward_weight,
++    #     params={
++    #         "term_name": "survival",
++    #         "start_step": 1000,
++    #         "num_steps": 3000,
++    #         "start_weight": 2.0,
++    #         "end_weight": 0.25
++    #     },
++    # )
++    # tracking_lin_vel_x = CurrTerm(
++    #     func=bmdp.modify_reward_weight,
++    #     params={
++    #         "term_name": "tracking_lin_vel_x",
++    #         "start_step": 1000,
++    #         "num_steps": 3000,
++    #         "start_weight": 5.0,
++    #         "end_weight": 1.0
++    #     },
++    # )
++    # tracking_lin_vel_y = CurrTerm(
++    #     func=bmdp.modify_reward_weight,
++    #     params={
++    #         "term_name": "tracking_lin_vel_y",
++    #         "start_step": 1000,
++    #         "num_steps": 3000,
++    #         "start_weight": 5.0,
++    #         "end_weight": 1.0
++    #     },
++    # )
++    # tracking_ang_vel = CurrTerm(
++    #     func=bmdp.modify_reward_weight,
++    #     params={
++    #         "term_name": "tracking_ang_vel",
++    #         "start_step": 1000,
++    #         "num_steps": 3000,
++    #         "start_weight": 5.0,
++    #         "end_weight": 0.5
++    #     },
++    # )
++    # feet_swing = CurrTerm(
++    #     func=bmdp.modify_reward_weight,
++    #     params={
++    #         "term_name": "feet_swing",
++    #         "start_step": 1000,
++    #         "num_steps": 3000,
++    #         "start_weight": 6.0,
++    #         "end_weight": 3.0
++    #     },
++    # )
+ 
+ 
+ @configclass

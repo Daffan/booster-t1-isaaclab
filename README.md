@@ -1,3 +1,19 @@
+# Deploy Isaaclab models
+A already trained model (JIT script) from IsaacLab can be found under `logs/isaaclab/isaaclab.pt`.
+
+Deploy this model to MuJoCo:
+```
+python scripts/test_mujoco_roa_plot.py --task T1Hist --checkpoint logs/isaaclab/isaaclab.pt
+```
+
+Deploy this model to real robot:
+```
+# enter deploy folder
+cd deploy
+python deploy_hist.py --config T1_hist.yaml
+```
+Check deploy README for more details: `deploy/README.md`.
+
 # Booster Gym
 
 Booster Gym is a reinforcement learning (RL) framework designed for humanoid robot locomotion developed by [Booster Robotics](https://boosterobotics.com/).

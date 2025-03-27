@@ -137,7 +137,7 @@ class Actor(nn.Module):
 
         # for JIT export
         self.register_buffer("gym2lab_mapping", torch.tensor([0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11], dtype=torch.long))
-        self.register_buffer("lab2gym_mapping", torch.tensor([i for i in range(12)], dtype=torch.long))
+        self.register_buffer("lab2gym_mapping", torch.tensor([self.gym2lab_mapping.tolist().index(i) for i in range(12)], dtype=torch.long))
 
     
     def forward(self, obs: torch.Tensor, hist_encoding: bool = False) -> torch.Tensor:
@@ -165,10 +165,8 @@ class Actor(nn.Module):
         actor_input = torch.cat([obs[:, -1], latent], dim=1)
         return self.actor(actor_input)
 
-    @torch.jit.export
-    def act_real(self, obs: torch.Tensor) -> torch.Tensor:
-        # (batch_size, history_length, num_prop)
-        obs = torch.cat(
+    def process_obs(self, obs: torch.Tensor) -> torch.Tensor:
+        return torch.cat(
             (
                 obs[..., :12-1],
                 obs[..., 12-1:24-1].index_select(-1, self.gym2lab_mapping),
@@ -177,6 +175,11 @@ class Actor(nn.Module):
             ),
             dim=-1,
         )
+
+    @torch.jit.export
+    def act_mj(self, obs):
+        # (batch_size, history_length, num_prop)
+        obs = self.process_obs(obs)
         latent = self.infer_hist_latent(obs)
         actor_input = torch.cat([obs[:, -1], latent], dim=1)
         return self.actor(actor_input).index_select(-1, self.lab2gym_mapping)

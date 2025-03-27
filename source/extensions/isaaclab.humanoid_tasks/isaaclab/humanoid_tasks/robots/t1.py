@@ -84,10 +84,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             ],
             stiffness=200,
             damping=5,
-            # effort_limit=45,
+            effort_limit=45,
             max_delay=10,
             min_delay=0,
-            armature=0.05,
+            armature=0.0,
             friction=0.1
         ),
         "Hip_Roll_Yaw": DelayedPDActuatorCfg(
@@ -99,10 +99,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             ],
             stiffness=200,
             damping=5,
-            # effort_limit=30,
+            effort_limit=30,
             max_delay=10,
             min_delay=0,
-            armature=0.05,
+            armature=0.0,
             friction=0.1
         ),
         "Knee": DelayedPDActuatorCfg(
@@ -112,10 +112,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             ],
             stiffness=200,
             damping=5,
-            # effort_limit=60,
+            effort_limit=60,
             max_delay=10,
             min_delay=0,
-            armature=0.05,
+            armature=0.0,
             friction=0.1
         ),
         "Ankle_Pitch": DelayedPDActuatorCfg(
@@ -125,10 +125,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             ],
             stiffness=50,
             damping=1,
-            # effort_limit=24,
+            effort_limit=24,
             max_delay=10,
             min_delay=0,
-            armature=0.05,
+            armature=0.0,
             friction=0.1
         ),
         "Ankle_Roll": DelayedPDActuatorCfg(
@@ -138,10 +138,10 @@ T1_LOCOMOTION_CFG = ArticulationCfg(
             ],
             stiffness=50,
             damping=1,
-            # effort_limit=15,
+            effort_limit=15,
             max_delay=10,
             min_delay=0,
-            armature=0.05,
+            armature=0.0,
             friction=0.1
         )
     },

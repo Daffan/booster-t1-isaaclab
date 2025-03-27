@@ -35,24 +35,26 @@ gym.register(
 )
 
 gym.register(
-    id="Booster-T1-lb-RMA-walk-v0",
+    id="Booster-T1-lb-ROA-walk-v0",
     entry_point="isaaclab.humanoid_tasks.envs:HumanoidRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": walk_env_config.LowerBodyHistoryRLEnvCfg,
         "rsl_rl_cfg_entry_point": roa_ppo_config.T1BoosterWalkROAPPORunnerCfg(
-            experiment_name="t1-lb-RMA-walk",  # for logging purposes
+            experiment_name="t1-lb-ROA-walk",  # for logging purposes
         ),
     },
 )
 
 gym.register(
-    id="Booster-T1-lb-RMA-walk-v1",
+    id="Booster-T1-lb-ROA-walk-v1",
     entry_point="isaaclab.humanoid_tasks.envs:HumanoidRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": walk_env_config.LowerBodyHistoryV1RLEnvCfg,
-        "rsl_rl_cfg_entry_point": roa_ppo_config.T1BoosterWalkROAPPORunnerCfg,
+        "rsl_rl_cfg_entry_point": roa_ppo_config.T1BoosterWalkROAPPORunnerCfg(
+            experiment_name="t1-lb-ROA-walk",  # for logging purposes
+        ),
     },
 )
 

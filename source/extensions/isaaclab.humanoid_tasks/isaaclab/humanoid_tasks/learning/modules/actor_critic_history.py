@@ -190,7 +190,7 @@ class ActorCriticHistory(nn.Module):
                         critic_hidden_dims=[256, 256, 256],
                         priv_encoder_dims=[64, 20],
                         activation='elu',
-                        init_std=1.0,
+                        init_std=-2.0,
                         **kwargs):
         # if kwargs:
         #     print("ActorCritic.__init__ got unexpected arguments, which will be ignored: " + str([key for key in kwargs.keys()]))
@@ -229,7 +229,7 @@ class ActorCriticHistory(nn.Module):
         print(f"Critic MLP: {self.critic}")
 
         # Action noise
-        self.std = nn.Parameter(torch.tensor(init_std))
+        self.logstd = torch.nn.parameter.Parameter(torch.full((1, num_actions), fill_value=init_std), requires_grad=True)
         self.distribution = None
         # disable args validation for speedup
         Normal.set_default_validate_args = False
@@ -264,7 +264,7 @@ class ActorCriticHistory(nn.Module):
 
     def update_distribution(self, observations, hist_encoding=False):
         mean = self.actor(observations, hist_encoding)
-        self.distribution = Normal(mean, mean*0. + self.std)
+        self.distribution = Normal(mean, mean*0. + torch.exp(self.logstd).expand_as(mean))
 
     def act(self, observations, hist_encoding=False, **kwargs):
         self.update_distribution(observations, hist_encoding)

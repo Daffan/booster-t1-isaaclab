@@ -35,7 +35,7 @@ class HumanoidRLEnv(ManagerBasedRLEnv):
 
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         super().step(action)
-        self.action_histories.append(action.clone())
+        self.action_histories.append(action.clone())  # consider using action after clipping
         self.phase_time = torch.fmod(self.phase_time + self.step_dt / self.cfg.phase_freq, 1.0)
         if self.cfg.only_positive_rewards:
             self.reward_buf = torch.clamp(self.reward_buf, min=0.0)

@@ -135,7 +135,7 @@ def root_acc(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
 
 def action_rate(env: HumanoidRLEnv) -> torch.Tensor:
     """Penalize large instantaneous changes in the network action output"""
-    return torch.linalg.norm((env.action_manager.action - env.action_manager.prev_action), dim=1) ** 2
+    return torch.linalg.norm((env.action_manager.action.clip(-1.0, 1.0) - env.action_manager.prev_action.clip(-1.0, 1.0)), dim=1) ** 2
 
 def dof_pos_limits(env: HumanoidRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     """Penalize joint position limits on the articulation."""

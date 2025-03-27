@@ -23,9 +23,12 @@ class T1BoosterWalkROAPPORunnerCfg(T1PPORunnerCfg):
         self.experiment_name = "roa_ppo"
 
         self.policy.class_name = "ActorCriticHistory"
-        self.policy.actor_hidden_dims = [512, 256, 128]
-        self.policy.critic_hidden_dims = [512, 256, 128]
+        # self.policy.actor_hidden_dims = [512, 256, 128]
+        # self.policy.critic_hidden_dims = [512, 256, 128]
+        self.policy.actor_hidden_dims = [256, 128, 128]
+        self.policy.critic_hidden_dims = [256, 256, 128]
         # self.policy.priv_encoder_dims = [128, 64, 20]
+        self.policy.init_std = -1.0  # this is log std actually
 
         self.algorithm.class_name = "ROAPPO"
         self.algorithm.value_loss_coef = 1.0

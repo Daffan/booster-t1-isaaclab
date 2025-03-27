@@ -145,7 +145,7 @@ class ObservationsCfg:
         joint_stiffness = ObsTerm(func=bmdp.joint_stiffness, params={"asset_cfg": SceneEntityCfg("robot")})
         joint_damping = ObsTerm(func=bmdp.joint_damping, params={"asset_cfg": SceneEntityCfg("robot")})
         joint_friction = ObsTerm(func=bmdp.joint_friction, params={"asset_cfg": SceneEntityCfg("robot")})
-        joint_armature = ObsTerm(func=bmdp.joint_armature, params={"asset_cfg": SceneEntityCfg("robot")})
+        # joint_armature = ObsTerm(func=bmdp.joint_armature, params={"asset_cfg": SceneEntityCfg("robot")})
 
     @configclass
     class PolicyCfg(ObsGroup):
@@ -250,7 +250,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "mass_distribution_params": (-0.005, 0.015),
+            "mass_distribution_params": (-0.005, 0.005),
             "operation": "add",
             "distribution": "uniform",
         },
@@ -273,8 +273,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "friction_distribution_params": (0.0, 0.1),
-            "armature_distribution_params": (0.0, 0.05),
+            "friction_distribution_params": (0.0, 0.2),
             "operation": "abs",
             "distribution": "uniform",
         },
@@ -370,56 +369,56 @@ class TerminationsCfg:
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
-    survival = CurrTerm(
-        func=bmdp.modify_reward_weight,
-        params={
-            "term_name": "survival",
-            "start_step": 1000,
-            "num_steps": 3000,
-            "start_weight": 2.0,
-            "end_weight": 0.25
-        },
-    )
-    tracking_lin_vel_x = CurrTerm(
-        func=bmdp.modify_reward_weight,
-        params={
-            "term_name": "tracking_lin_vel_x",
-            "start_step": 1000,
-            "num_steps": 3000,
-            "start_weight": 5.0,
-            "end_weight": 1.0
-        },
-    )
-    tracking_lin_vel_y = CurrTerm(
-        func=bmdp.modify_reward_weight,
-        params={
-            "term_name": "tracking_lin_vel_y",
-            "start_step": 1000,
-            "num_steps": 3000,
-            "start_weight": 5.0,
-            "end_weight": 1.0
-        },
-    )
-    tracking_ang_vel = CurrTerm(
-        func=bmdp.modify_reward_weight,
-        params={
-            "term_name": "tracking_ang_vel",
-            "start_step": 1000,
-            "num_steps": 3000,
-            "start_weight": 5.0,
-            "end_weight": 0.5
-        },
-    )
-    feet_swing = CurrTerm(
-        func=bmdp.modify_reward_weight,
-        params={
-            "term_name": "feet_swing",
-            "start_step": 1000,
-            "num_steps": 3000,
-            "start_weight": 6.0,
-            "end_weight": 3.0
-        },
-    )
+    # survival = CurrTerm(
+    #     func=bmdp.modify_reward_weight,
+    #     params={
+    #         "term_name": "survival",
+    #         "start_step": 1000,
+    #         "num_steps": 3000,
+    #         "start_weight": 2.0,
+    #         "end_weight": 0.25
+    #     },
+    # )
+    # tracking_lin_vel_x = CurrTerm(
+    #     func=bmdp.modify_reward_weight,
+    #     params={
+    #         "term_name": "tracking_lin_vel_x",
+    #         "start_step": 1000,
+    #         "num_steps": 3000,
+    #         "start_weight": 5.0,
+    #         "end_weight": 1.0
+    #     },
+    # )
+    # tracking_lin_vel_y = CurrTerm(
+    #     func=bmdp.modify_reward_weight,
+    #     params={
+    #         "term_name": "tracking_lin_vel_y",
+    #         "start_step": 1000,
+    #         "num_steps": 3000,
+    #         "start_weight": 5.0,
+    #         "end_weight": 1.0
+    #     },
+    # )
+    # tracking_ang_vel = CurrTerm(
+    #     func=bmdp.modify_reward_weight,
+    #     params={
+    #         "term_name": "tracking_ang_vel",
+    #         "start_step": 1000,
+    #         "num_steps": 3000,
+    #         "start_weight": 5.0,
+    #         "end_weight": 0.5
+    #     },
+    # )
+    # feet_swing = CurrTerm(
+    #     func=bmdp.modify_reward_weight,
+    #     params={
+    #         "term_name": "feet_swing",
+    #         "start_step": 1000,
+    #         "num_steps": 3000,
+    #         "start_weight": 6.0,
+    #         "end_weight": 3.0
+    #     },
+    # )
 
 
 @configclass
@@ -695,6 +694,16 @@ class BoosterRewardsCfg:
             "swing_period": 0.2,
         }
     )
+    # feet_swing = RewardTermCfg(
+    #     func=wmdp.feet_swing_height,
+    #     weight=4.0,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot_link"),
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
+    #         "swing_period": 0.2,
+    #         "target_height": 0.06
+    #     }
+    # )
 
 
 @configclass
